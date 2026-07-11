@@ -169,7 +169,7 @@
         <div id="create-role-fields" class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-slate-500 mb-2 font-sans"><i class="fa-solid fa-pencil"></i> 1. 輸入練習生暱稱（第一次會自動建立）</label>
-            <input type="text" id="nickname-input" class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-center text-lg font-sans font-bold" placeholder="請輸入名字..." maxlength="15">
+            <input type="text" id="nickname-input" autocomplete="off" autocapitalize="off" spellcheck="false" class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-center text-lg font-sans font-bold" placeholder="請輸入名字..." maxlength="15">
           </div>
           <!-- 🔑 新增：可自行輸入配對碼功能（含隨機產生輔助） -->
           <div>
@@ -179,7 +179,7 @@
                 <i class="fa-solid fa-dice text-[9px]"></i> 隨機產生
               </button>
             </label>
-            <input type="text" id="nickname-code-input" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-center font-mono font-bold tracking-widest uppercase text-base" placeholder="輸入或隨機產生 5 碼..." maxlength="5">
+            <input type="text" id="nickname-code-input" autocomplete="new-password" autocapitalize="characters" spellcheck="false" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-center font-mono font-bold tracking-widest uppercase text-base" placeholder="輸入或隨機產生 5 碼..." maxlength="5">
             <p class="text-[9px] text-slate-400 mt-1 font-sans">※ 第一次會自動建立；之後用同暱稱登入時，需輸入相同認證碼。</p>
           </div>
         </div>
@@ -649,8 +649,8 @@
         <!-- 登入介面 -->
         <div id="admin-login-box" class="space-y-4 py-8 max-w-sm mx-auto text-center">
           <p class="text-sm text-slate-500 font-sans font-sans">請輸入管理員帳號密碼進行驗證</p>
-          <input type="text" id="admin-user-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台帳號">
-          <input type="password" id="admin-pass-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台密碼">
+          <input type="text" id="admin-user-input" autocomplete="username" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台帳號">
+          <input type="password" id="admin-pass-input" autocomplete="current-password" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台密碼">
           <p class="text-[10px] text-slate-400 leading-relaxed">後台僅限管理者使用，帳號密碼會送到 GAS 驗證；前端不保存後台密碼。</p>
           <button onclick="verifyAdminLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl transition font-sans font-sans">驗證登入</button>
         </div>
@@ -828,8 +828,8 @@
     // ==========================================
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyKuv3FLS9z6Bznib8kNwIOHZ8sgxRXkrR1gZM-vvHXAMTVeT0lsPEZM7HSGUkp36Uf/exec";
     const GAS_SYNC_TOKEN = "linrich-99x9-2026";
-    const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v4";
-    const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v4";
+    const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v5";
+    const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v5";
     const ADMIN_MAX_FAILED_ATTEMPTS = 5;
     const ADMIN_LOCK_MINUTES = 10;
 
@@ -892,6 +892,7 @@
       isTransitioning: false,
       isSavingScore: false,
       currentSessionId: null,
+      currentSessionLogStartIndex: 0,
       adminSettings: {
         hideSuperMode: true,
         forceDailyChallenge: true,
@@ -1029,7 +1030,9 @@
       const node = document.getElementById('user-ip-display');
       if (!node) return;
       const ip = window.appState.userIP && window.appState.userIP !== 'Localhost' ? window.appState.userIP : '0.0.0.0';
-      if (mode === 'gas' || window.appState.accountSyncMode === 'gas') {
+      if (mode === 'checking') {
+        node.textContent = '同步檢查中...';
+      } else if (mode === 'gas' || window.appState.accountSyncMode === 'gas') {
         node.textContent = `同步正常｜IP: ${ip}`;
       } else {
         node.textContent = '本機模式';
@@ -1038,6 +1041,7 @@
     window.updateTopSyncStatus = updateTopSyncStatus;
 
     async function checkGasSyncStatus() {
+      updateTopSyncStatus('checking');
       const gasUrl = getGasUrl();
       if (!isConfiguredGasUrl(gasUrl)) {
         updateTopSyncStatus('local');
@@ -1103,7 +1107,7 @@
         pairingCode,
         ip: window.appState.userIP || '0.0.0.0',
         userId: window.appState.userId || 'github_pages_user',
-        appVersion: 'github-gas-4.1'
+        appVersion: 'github-gas-4.3'
       });
     }
     window.gasAuthenticateProfile = gasAuthenticateProfile;
@@ -1225,12 +1229,11 @@
       }
 
       try {
-        const passHash = await sha256Hex(pass);
         const result = await jsonpRequest(gasUrl, {
           action: 'adminAuth',
           token: GAS_SYNC_TOKEN,
           username: user,
-          passHash,
+          password: pass,
           ip: window.appState.userIP || '0.0.0.0'
         }, 8000);
 
@@ -1244,7 +1247,7 @@
           return;
         }
 
-        throw new Error((result && result.message) || '後台驗證失敗');
+        throw new Error((result && result.message) || '後台驗證失敗，請確認「管理員帳號」工作表是否已設定。');
       } catch (err) {
         const failed = Number(localStorage.getItem(ADMIN_ATTEMPT_STORAGE_KEY) || 0) + 1;
         localStorage.setItem(ADMIN_ATTEMPT_STORAGE_KEY, String(failed));
@@ -1706,7 +1709,8 @@
               correctCount: item.correctCount,
               weightedScore: item.weightedScore,
               timestamp: item.timestamp,
-              ip: item.ip || 'Localhost'
+              ip: item.ip || 'Localhost',
+              questionLogs: Array.isArray(item.questionLogs) ? item.questionLogs : []
             }));
           } catch(e) {
             console.error("解析本機歷史紀錄失敗:", e);
@@ -1751,7 +1755,7 @@
           headers: {
             'Content-Type': 'text/plain' 
           },
-          body: JSON.stringify({ token: GAS_SYNC_TOKEN, scores: scores, profiles: profiles, appVersion: 'github-gas-4.1' })
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, scores: scores, profiles: profiles, appVersion: 'github-gas-4.3' })
         });
 
         playSound('correct');
@@ -2314,6 +2318,10 @@
       playSound('click');
       localStorage.removeItem('9x9_active_profile');
       document.getElementById('user-display-name').textContent = "未登入";
+      const nickInput = document.getElementById('nickname-input');
+      const codeInput = document.getElementById('nickname-code-input');
+      if (nickInput) nickInput.value = '';
+      if (codeInput) codeInput.value = '';
       showPanel('login-panel');
       initLoginSyncModeUI();
       scanAndShowProfiles();
@@ -2367,7 +2375,7 @@
     function setupOfflineUser() {
       window.appState.userId = 'offline_user';
       window.appState.userIP = '0.0.0.0';
-      updateTopSyncStatus('local');
+      updateTopSyncStatus('checking');
       fetchUserIP().then(() => checkGasSyncStatus()).catch(() => updateTopSyncStatus('local'));
       
       const savedLogs = localStorage.getItem('9x9_offline_question_logs');
@@ -2885,6 +2893,7 @@
       window.appState.questionLogs = window.appState.questionLogs || [];
       window.appState.startTime = Date.now();
       window.appState.currentSessionId = `${getSafeNickname(localStorage.getItem('9x9_active_profile') || 'student')}_${window.appState.currentMode}_${window.appState.startTime}`;
+      window.appState.currentSessionLogStartIndex = (window.appState.questionLogs || []).length;
       window.appState.isSavingScore = false;
       clearInterval(window.appState.timerInterval);
       window.appState.timerInterval = setInterval(updateTimer, 30);
@@ -2927,6 +2936,7 @@
       window.appState.elapsedTimeSeconds = 0;
       window.appState.startTime = Date.now();
       window.appState.currentSessionId = `${getSafeNickname(localStorage.getItem('9x9_active_profile') || 'student')}_weakness_${window.appState.startTime}`;
+      window.appState.currentSessionLogStartIndex = (window.appState.questionLogs || []).length;
       window.appState.isSavingScore = false;
       clearInterval(window.appState.timerInterval);
       window.appState.timerInterval = setInterval(updateTimer, 30);
@@ -3046,7 +3056,7 @@
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: 'github-gas-4.1-auto' })
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: 'github-gas-4.3-auto' })
         });
         window.appState.accountSyncMode = 'gas';
         updateTopSyncStatus('gas');
@@ -3073,7 +3083,8 @@
         weightedScore: result.weightedScore,
         timestamp: result.timestamp || new Date().toISOString(),
         ip: window.appState.userIP || '0.0.0.0',
-        userId: window.appState.userId || 'offline_user'
+        userId: window.appState.userId || 'offline_user',
+        questionLogs: Array.isArray(result.questionLogs) ? result.questionLogs : []
       };
 
       if (useLocalStorageFallback) {
@@ -3123,7 +3134,8 @@
         accuracy,
         duration,
         formattedTime: formatTime(duration),
-        weightedScore
+        weightedScore,
+        questionLogs: (window.appState.questionLogs || []).slice(window.appState.currentSessionLogStartIndex || 0)
       };
       window.appState.lastResult = result;
 
@@ -3359,6 +3371,15 @@
         pressKey('enter');
       }
     });
+
+    // 切換或重新輸入暱稱時，認證碼一律清空，避免共用裝置自動帶出上一位學生的認證碼。
+    const nicknameInputForCodeReset = document.getElementById('nickname-input');
+    if (nicknameInputForCodeReset) {
+      nicknameInputForCodeReset.addEventListener('input', () => {
+        const codeInput = document.getElementById('nickname-code-input');
+        if (codeInput) codeInput.value = '';
+      });
+    }
 
 
     // --- 啟動與初始化程序執行 ---

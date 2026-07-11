@@ -649,8 +649,8 @@
         <!-- 登入介面 -->
         <div id="admin-login-box" class="space-y-4 py-8 max-w-sm mx-auto text-center">
           <p class="text-sm text-slate-500 font-sans font-sans">請輸入管理員帳號密碼進行驗證</p>
-          <input type="text" id="admin-user-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台帳號，可留空">
-          <input type="password" id="admin-pass-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="此裝置後台通行碼">
+          <input type="text" id="admin-user-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台帳號">
+          <input type="password" id="admin-pass-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台密碼">
           <p class="text-[10px] text-slate-400 leading-relaxed">GitHub 公開版不再內建固定後台密碼。第一次在此裝置輸入的通行碼會成為後台通行碼；請勿讓學生使用管理者裝置。</p>
           <button onclick="verifyAdminLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl transition font-sans font-sans">驗證登入</button>
         </div>
@@ -828,9 +828,8 @@
     // ==========================================
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyKuv3FLS9z6Bznib8kNwIOHZ8sgxRXkrR1gZM-vvHXAMTVeT0lsPEZM7HSGUkp36Uf/exec";
     const GAS_SYNC_TOKEN = "linrich-99x9-2026";
-    const ADMIN_HASH_STORAGE_KEY = "9x9_admin_pass_hash_v2";
-    const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v2";
-    const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v2";
+    const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v3";
+    const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v3";
     const ADMIN_MAX_FAILED_ATTEMPTS = 5;
     const ADMIN_LOCK_MINUTES = 10;
 
@@ -1111,50 +1110,52 @@
         return;
       }
 
-      if (!pass || pass.length < 8) {
+      if (!user || !pass) {
         playSound('wrong');
-        alertModal("通行碼太短", "請輸入至少 8 碼的後台通行碼。GitHub 公開版不再使用內建固定密碼。建議使用英數混合。 ");
+        alertModal("請輸入帳號密碼", "後台僅限管理者使用，請輸入後台帳號與密碼。");
         return;
       }
 
-      const savedHash = localStorage.getItem(ADMIN_HASH_STORAGE_KEY);
-      const candidateHash = await sha256Hex(pass);
-
-      if (!savedHash) {
-        const ok = confirm(`此裝置尚未設定後台通行碼。
-
-是否將目前輸入的通行碼設定為此裝置的後台通行碼？
-
-提醒：GitHub Pages 是公開靜態網頁，這個通行碼只保護此瀏覽器中的後台畫面，不是伺服器級權限。請勿在學生共用裝置上設定管理者通行碼。`);
-        if (!ok) return;
-        localStorage.setItem(ADMIN_HASH_STORAGE_KEY, candidateHash);
-        localStorage.setItem('9x9_admin_name_hint', user || 'local-admin');
-        localStorage.removeItem(ADMIN_ATTEMPT_STORAGE_KEY);
-        localStorage.removeItem(ADMIN_LOCK_STORAGE_KEY);
-        isAdminLoggedIn = true;
-        playSound('correct');
-        showAdminDashboard();
+      const gasUrl = getGasUrl();
+      if (!isConfiguredGasUrl(gasUrl)) {
+        playSound('wrong');
+        alertModal("後台無法驗證", "目前沒有可用的 GAS URL，因此無法進行雲端後台驗證。學生仍可使用本機模式練習。 ");
         return;
       }
 
-      if (candidateHash === savedHash) {
-        localStorage.removeItem(ADMIN_ATTEMPT_STORAGE_KEY);
-        localStorage.removeItem(ADMIN_LOCK_STORAGE_KEY);
-        isAdminLoggedIn = true;
-        playSound('correct');
-        showAdminDashboard();
-      } else {
+      try {
+        const passHash = await sha256Hex(pass);
+        const result = await jsonpRequest(gasUrl, {
+          action: 'adminAuth',
+          token: GAS_SYNC_TOKEN,
+          username: user,
+          passHash,
+          ip: window.appState.userIP || '0.0.0.0'
+        }, 8000);
+
+        if (result && result.status === 'success') {
+          localStorage.removeItem(ADMIN_ATTEMPT_STORAGE_KEY);
+          localStorage.removeItem(ADMIN_LOCK_STORAGE_KEY);
+          sessionStorage.setItem('9x9_admin_verified', '1');
+          isAdminLoggedIn = true;
+          playSound('correct');
+          showAdminDashboard();
+          return;
+        }
+
+        throw new Error((result && result.message) || '後台驗證失敗');
+      } catch (err) {
         const failed = Number(localStorage.getItem(ADMIN_ATTEMPT_STORAGE_KEY) || 0) + 1;
         localStorage.setItem(ADMIN_ATTEMPT_STORAGE_KEY, String(failed));
         if (failed >= ADMIN_MAX_FAILED_ATTEMPTS) {
           localStorage.setItem(ADMIN_LOCK_STORAGE_KEY, String(now + ADMIN_LOCK_MINUTES * 60 * 1000));
           localStorage.setItem(ADMIN_ATTEMPT_STORAGE_KEY, '0');
           playSound('wrong');
-          alertModal("後台已鎖定", `密碼錯誤已達 ${ADMIN_MAX_FAILED_ATTEMPTS} 次，後台將暫時鎖定 ${ADMIN_LOCK_MINUTES} 分鐘。`);
+          alertModal("後台已鎖定", `驗證失敗已達 ${ADMIN_MAX_FAILED_ATTEMPTS} 次，後台將暫時鎖定 ${ADMIN_LOCK_MINUTES} 分鐘。`);
           return;
         }
         playSound('wrong');
-        alertModal("驗證失敗！", `後台通行碼錯誤。剩餘 ${ADMIN_MAX_FAILED_ATTEMPTS - failed} 次嘗試後會暫時鎖定。若忘記通行碼，請清除本網站 localStorage 後重新設定。`);
+        alertModal("驗證失敗！", `${err.message || '帳號或密碼錯誤'}。剩餘 ${ADMIN_MAX_FAILED_ATTEMPTS - failed} 次嘗試後會暫時鎖定。`);
       }
     }
     window.verifyAdminLogin = verifyAdminLogin;

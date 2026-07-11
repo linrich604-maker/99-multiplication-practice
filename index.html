@@ -892,6 +892,8 @@
       isTransitioning: false,
       isSavingScore: false,
       currentSessionId: null,
+      currentSessionToken: null,
+      nextQuestionTimeout: null,
       currentSessionLogStartIndex: 0,
       adminSettings: {
         hideSuperMode: true,
@@ -1107,7 +1109,7 @@
         pairingCode,
         ip: window.appState.userIP || '0.0.0.0',
         userId: window.appState.userId || 'github_pages_user',
-        appVersion: 'github-gas-4.3'
+        appVersion: 'github-gas-4.7-stable-weak-admin'
       });
     }
     window.gasAuthenticateProfile = gasAuthenticateProfile;
@@ -1755,7 +1757,7 @@
           headers: {
             'Content-Type': 'text/plain' 
           },
-          body: JSON.stringify({ token: GAS_SYNC_TOKEN, scores: scores, profiles: profiles, appVersion: 'github-gas-4.6-weak-diagnostics' })
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, scores: scores, profiles: profiles, appVersion: 'github-gas-4.7-stable-weak-admin' })
         });
 
         playSound('correct');
@@ -1796,67 +1798,97 @@
     }
     window.exportScoresToCSV = exportScoresToCSV;
 
+    function renderAdminScoresRows(list) {
+      const tbody = document.getElementById('admin-table-tbody');
+      if (!tbody) return;
+      list = Array.isArray(list) ? list : [];
+      list.sort((a, b) => new Date(b.timestamp || b.rawTimestamp || 0) - new Date(a.timestamp || a.rawTimestamp || 0));
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">目前尚無學生成績。</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      list.forEach(item => {
+        const row = document.createElement('tr');
+        const dateObj = new Date(item.timestamp || item.rawTimestamp || item.date || Date.now());
+        const date = isNaN(dateObj.getTime()) ? escapeHtml(item.date || '') : dateObj.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        row.className = 'hover:bg-slate-50 transition border-b';
+        let modeBadge = '<span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">基礎</span>';
+        if (item.mode === 'super' || String(item.modeLabel || '').includes('超級')) {
+          modeBadge = '<span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">⚡ 超級</span>';
+        } else if (item.mode === 'daily' || String(item.modeLabel || '').includes('每日')) {
+          modeBadge = '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">✨ 每日</span>';
+        } else if (item.mode === 'weakness' || String(item.modeLabel || '').includes('弱點')) {
+          modeBadge = '<span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">🎯 弱點</span>';
+        }
+        const duration = Number(item.duration || 0);
+        const scoreId = escapeHtml(item.id || item.recordId || '');
+        const nickname = escapeHtml(item.nickname || '未命名');
+        const mode = escapeHtml(item.mode || item.modeLabel || '');
+        row.innerHTML = `
+          <td class="py-2 px-3">${date}</td>
+          <td class="py-2 px-3 font-bold font-sans">${nickname}</td>
+          <td class="py-2 px-3 text-center">${modeBadge}</td>
+          <td class="py-2 px-3 text-center">${escapeHtml(item.questionsCount || item.questionsLabel || 0)}${String(item.questionsCount || '').includes('題') ? '' : ' 題'}</td>
+          <td class="py-2 px-3 text-center font-bold text-indigo-600 font-mono">${escapeHtml(item.accuracy || 0)}%</td>
+          <td class="py-2 px-3 text-center">${isNaN(duration) ? escapeHtml(item.duration || '') : duration.toFixed(2)} 秒</td>
+          <td class="py-2 px-3 text-center font-bold text-emerald-600">${escapeHtml(item.weightedScore || 0)}</td>
+          <td class="py-2 px-3 font-mono">${escapeHtml(item.ip || '0.0.0.0')}</td>
+          <td class="py-2 px-3 text-right">
+            <button onclick="deleteAdminScoreRecord('${scoreId}', '${nickname}', '${mode}', ${Number(item.accuracy) || 0}, ${Number(item.weightedScore) || 0})" class="bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 w-8 h-8 rounded-lg transition inline-flex items-center justify-center font-sans" title="刪除此筆紀錄">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>`;
+        tbody.appendChild(row);
+      });
+    }
+    window.renderAdminScoresRows = renderAdminScoresRows;
+
     async function loadAdminScoresTable() {
       const tbody = document.getElementById('admin-table-tbody');
-      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">實時同步雲端數據中...</td></tr>';
-      
-      if (useLocalStorageFallback) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">目前處於本機離線模式，無法讀取雲端大資料庫。</td></tr>';
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">讀取全體歷程數據中...</td></tr>';
+
+      // GitHub/GAS 版優先從試算表讀回「所有作答歷程」，後台不再只看本機或 Firebase。
+      const gasUrl = getGasUrl();
+      if (isConfiguredGasUrl(gasUrl)) {
+        try {
+          const result = await jsonpRequest(gasUrl, {
+            action: 'listScores',
+            token: GAS_SYNC_TOKEN,
+            limit: 300
+          }, 10000);
+          if (result && result.status === 'success') {
+            renderAdminScoresRows(result.scores || []);
+            return;
+          }
+        } catch (e) {
+          console.warn('從 GAS 讀取所有作答歷程失敗，改用本機/Firebase 備援。', e);
+        }
+      }
+
+      // 備援：本機歷史紀錄。
+      try {
+        const localHistory = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]');
+        if (Array.isArray(localHistory) && localHistory.length > 0) {
+          renderAdminScoresRows(localHistory.map(x => ({ id: x.recordId, ...x })));
+          return;
+        }
+      } catch(e) {}
+
+      if (useLocalStorageFallback || !db) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">目前讀不到試算表或本機歷程資料。</td></tr>';
         return;
       }
 
       try {
         const scoresColRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
         const querySnapshot = await getDocs(scoresColRef);
-        
-        let list = [];
-        querySnapshot.forEach(doc => {
-          const d = doc.data();
-          list.push({
-            id: doc.id,
-            ...d
-          });
-        });
-
-        list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-        if (list.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">目前尚無學生成績。</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = '';
-        list.forEach(item => {
-          const row = document.createElement('tr');
-          const date = new Date(item.timestamp).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-          row.className = 'hover:bg-slate-50 transition border-b';
-          
-          let modeBadge = '<span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">基礎</span>';
-          if (item.mode === 'super') {
-            modeBadge = '<span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans font-sans">⚡ 超級</span>';
-          } else if (item.mode === 'daily') {
-            modeBadge = '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">✨ 每日</span>';
-          }
-
-          row.innerHTML = `
-            <td class="py-2 px-3">${date}</td>
-            <td class="py-2 px-3 font-bold font-sans">${escapeHtml(item.nickname)}</td>
-            <td class="py-2 px-3 text-center">${modeBadge}</td>
-            <td class="py-2 px-3 text-center">${item.questionsCount} 題</td>
-            <td class="py-2 px-3 text-center font-bold text-indigo-600 font-mono">${item.accuracy}%</td>
-            <td class="py-2 px-3 text-center">${item.duration.toFixed(2)} 秒</td>
-            <td class="py-2 px-3 text-center font-bold text-emerald-600">${item.weightedScore}</td>
-            <td class="py-2 px-3 font-mono">${item.ip || '0.0.0.0'}</td>
-            <td class="py-2 px-3 text-right">
-              <button onclick="deleteAdminScoreRecord('${item.id}', '${item.nickname}', '${item.mode}', ${item.accuracy}, ${item.weightedScore})" class="bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 w-8 h-8 rounded-lg transition inline-flex items-center justify-center font-sans" title="刪除此筆紀錄">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            </td>
-          `;
-          tbody.appendChild(row);
-        });
+        const list = [];
+        querySnapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+        renderAdminScoresRows(list);
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-rose-500 font-sans">無法同步雲端數據。</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-rose-500 font-sans">無法讀取全體歷程數據。</td></tr>';
       }
     }
     window.loadAdminScoresTable = loadAdminScoresTable;
@@ -2892,9 +2924,12 @@
       window.appState.elapsedTimeSeconds = 0;
       window.appState.questionLogs = window.appState.questionLogs || [];
       window.appState.startTime = Date.now();
+      window.appState.currentSessionToken = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       window.appState.currentSessionId = `${getSafeNickname(localStorage.getItem('9x9_active_profile') || 'student')}_${window.appState.currentMode}_${window.appState.startTime}`;
       window.appState.currentSessionLogStartIndex = (window.appState.questionLogs || []).length;
       window.appState.isSavingScore = false;
+      if (window.appState.nextQuestionTimeout) clearTimeout(window.appState.nextQuestionTimeout);
+      window.appState.nextQuestionTimeout = null;
       clearInterval(window.appState.timerInterval);
       window.appState.timerInterval = setInterval(updateTimer, 30);
 
@@ -2935,9 +2970,12 @@
       window.appState.currentInput = '';
       window.appState.elapsedTimeSeconds = 0;
       window.appState.startTime = Date.now();
+      window.appState.currentSessionToken = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       window.appState.currentSessionId = `${getSafeNickname(localStorage.getItem('9x9_active_profile') || 'student')}_weakness_${window.appState.startTime}`;
       window.appState.currentSessionLogStartIndex = (window.appState.questionLogs || []).length;
       window.appState.isSavingScore = false;
+      if (window.appState.nextQuestionTimeout) clearTimeout(window.appState.nextQuestionTimeout);
+      window.appState.nextQuestionTimeout = null;
       clearInterval(window.appState.timerInterval);
       window.appState.timerInterval = setInterval(updateTimer, 30);
       showPanel('game-panel');
@@ -3009,14 +3047,20 @@
       showFeedback(correct);
       window.appState.isTransitioning = true;
 
-      setTimeout(() => {
+      const sessionToken = window.appState.currentSessionToken;
+      const answeredIndex = window.appState.currentQuestionIndex;
+      if (window.appState.nextQuestionTimeout) clearTimeout(window.appState.nextQuestionTimeout);
+      window.appState.nextQuestionTimeout = setTimeout(() => {
+        // 防止瀏覽器重複觸發、舊 timeout 或雙擊造成第二題開始亂跳。
+        if (sessionToken !== window.appState.currentSessionToken) return;
+        if (answeredIndex !== window.appState.currentQuestionIndex) return;
         window.appState.currentQuestionIndex += 1;
         if (window.appState.currentQuestionIndex >= window.appState.questions.length) {
           finishGame();
         } else {
           renderQuestion();
         }
-      }, correct ? 180 : 350);
+      }, correct ? 360 : 520);
     }
     window.pressKey = pressKey;
 
@@ -3063,7 +3107,7 @@
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: 'github-gas-4.6-weak-diagnostics-auto' })
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: 'github-gas-4.7-stable-weak-admin' })
         });
         window.appState.accountSyncMode = 'gas';
         updateTopSyncStatus('gas');
@@ -3124,6 +3168,8 @@
       if (window.appState.isSavingScore) return;
       window.appState.isSavingScore = true;
       window.appState.isTransitioning = true;
+      if (window.appState.nextQuestionTimeout) clearTimeout(window.appState.nextQuestionTimeout);
+      window.appState.nextQuestionTimeout = null;
       clearInterval(window.appState.timerInterval);
       updateTimer();
 
@@ -3163,6 +3209,8 @@
 
     function backToMenu() {
       playSound('click');
+      if (window.appState.nextQuestionTimeout) clearTimeout(window.appState.nextQuestionTimeout);
+      window.appState.nextQuestionTimeout = null;
       clearInterval(window.appState.timerInterval);
       showPanel('menu-panel');
       recalculateWeaknessFromLogs();
@@ -3364,7 +3412,8 @@
     // --- 靜態 DOM 元素事件接聽器 ---
 
     window.addEventListener('keydown', (e) => {
-      if (document.activeElement.tagName === 'INPUT') return;
+      if (e.repeat) return;
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
       if (window.appState.isTransitioning) return; // 🔒 狀態鎖保護
 
       if (e.key >= '0' && e.key <= '9') {

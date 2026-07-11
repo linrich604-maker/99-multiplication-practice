@@ -1755,7 +1755,7 @@
           headers: {
             'Content-Type': 'text/plain' 
           },
-          body: JSON.stringify({ token: GAS_SYNC_TOKEN, scores: scores, profiles: profiles, appVersion: 'github-gas-4.3' })
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, scores: scores, profiles: profiles, appVersion: 'github-gas-4.6-weak-diagnostics' })
         });
 
         playSound('correct');
@@ -3044,19 +3044,26 @@
     }
     window.persistProfileLogs = persistProfileLogs;
 
-    async function syncCurrentLocalDataToGasSilently() {
+    async function syncCurrentLocalDataToGasSilently(latestRecord = null) {
       const gasUrl = getGasUrl();
       if (!isConfiguredGasUrl(gasUrl)) return false;
       try {
         const profiles = getLocalProfilesWithMeta();
         let scores = [];
         try { scores = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch(e) { scores = []; }
+        if (latestRecord && latestRecord.recordId && !scores.some(s => s && s.recordId === latestRecord.recordId)) {
+          scores.unshift(latestRecord);
+        }
+        scores = scores.map(item => ({
+          ...item,
+          questionLogs: Array.isArray(item.questionLogs) ? item.questionLogs : []
+        }));
         if (profiles.length === 0 && scores.length === 0) return false;
         await fetch(gasUrl, {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: 'github-gas-4.3-auto' })
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: 'github-gas-4.6-weak-diagnostics-auto' })
         });
         window.appState.accountSyncMode = 'gas';
         updateTopSyncStatus('gas');
@@ -3104,7 +3111,7 @@
       }
 
       // GitHub/GAS 版：完成練習後嘗試背景同步；GAS 失效不影響學生使用。
-      syncCurrentLocalDataToGasSilently();
+      syncCurrentLocalDataToGasSilently(record);
 
       if (result.mode === 'daily') {
         localStorage.setItem(`9x9_daily_done_${activeProfile}_${getTodayKey()}`, 'true');

@@ -1,0 +1,3293 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9x9 乘法極限練習器</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    .game-font,
+    .number-font,
+    .font-mono {
+      font-family: 'M PLUS Rounded 1c', 'Noto Sans TC', sans-serif !important;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.01em;
+    }
+    .game-font,
+    .number-font {
+      font-weight: 800;
+    }
+    /* 弱點矩陣漸層色 */
+    .weak-0 { background-color: #f0fdf4; } /* 完美/極速 (綠) */
+    .weak-1 { background-color: #fef08a; } /* 輕微不熟/稍慢 (黃) */
+    .weak-2 { background-color: #fed7aa; } /* 注意/卡頓 (橘) */
+    .weak-3 { background-color: #fecaca; } /* 極弱/嚴重慢 (紅) */
+    /* 反應時間精熟度：簡化為 4 段，配合整體活潑色系 */
+    .time-grade-0 { background-color: #bbf7d0; color: #166534; } /* ≤ 5 秒：熟練綠 */
+    .time-grade-1 { background-color: #fef3c7; color: #92400e; } /* 5–10 秒：提醒黃 */
+    .time-grade-2 { background-color: #fed7aa; color: #9a3412; } /* 10–20 秒：練習橘 */
+    .time-grade-3 { background-color: #fecaca; color: #991b1b; } /* ≥ 20 秒：加強紅 */
+
+    /* 活潑統一主題：以明亮藍色為主，搭配天空藍與暖黃色提示 */
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 34rem),
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.20), transparent 30rem),
+        linear-gradient(135deg, #eff6ff 0%, #e0f2fe 48%, #fff7ed 100%);
+    }
+    header, #login-panel, #menu-panel > div, #content-tabs-container, #game-panel, #result-panel {
+      border-color: #bfdbfe !important;
+      box-shadow: 0 16px 34px rgba(37, 99, 235, 0.10);
+    }
+    .bg-indigo-50 { background-color: #eff6ff !important; }
+    .bg-indigo-50\/40 { background-color: rgba(239, 246, 255, 0.76) !important; }
+    .bg-indigo-50\/50 { background-color: rgba(239, 246, 255, 0.76) !important; }
+    .border-indigo-100 { border-color: #bfdbfe !important; }
+    .bg-indigo-600 { background-color: #2563eb !important; }
+    .hover\:bg-indigo-700:hover { background-color: #1d4ed8 !important; }
+    .text-indigo-600 { color: #2563eb !important; }
+    .text-indigo-500 { color: #3b82f6 !important; }
+    .text-indigo-700 { color: #1d4ed8 !important; }
+    .border-indigo-600 { border-color: #2563eb !important; }
+    .ring-indigo-500 { --tw-ring-color: #3b82f6 !important; }
+    .focus\:ring-indigo-500:focus { --tw-ring-color: #3b82f6 !important; }
+    .focus\:border-indigo-500:focus { border-color: #3b82f6 !important; }
+    .shadow-indigo-100 { --tw-shadow-color: rgba(59, 130, 246, 0.18) !important; }
+    .shadow-indigo-200 { --tw-shadow-color: rgba(59, 130, 246, 0.24) !important; }
+    .bg-indigo-900, .bg-indigo-950 { background-color: #1e3a8a !important; }
+    .text-indigo-950 { color: #172554 !important; }
+    .text-indigo-900 { color: #1e3a8a !important; }
+    .text-indigo-300, .text-indigo-200 { color: #bfdbfe !important; }
+    .bg-yellow-400 { background-color: #facc15 !important; }
+    .hover\:bg-yellow-500:hover { background-color: #eab308 !important; }
+    .bg-emerald-500, .bg-emerald-600 { background-color: #22c55e !important; }
+    .hover\:bg-emerald-600:hover, .hover\:bg-emerald-700:hover { background-color: #16a34a !important; }
+    .from-purple-900 { --tw-gradient-from: #1d4ed8 var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(29 78 216 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+    .to-indigo-950 { --tw-gradient-to: #075985 var(--tw-gradient-to-position) !important; }
+    .bg-purple-600 { background-color: #0284c7 !important; }
+    .border-purple-400 { border-color: #7dd3fc !important; }
+    .text-purple-300 { color: #bae6fd !important; }
+    .bg-fuchsia-500, .from-pink-500, .to-fuchsia-500 { background-color: #0ea5e9 !important; }
+    .from-pink-500 { --tw-gradient-from: #0ea5e9 var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(14 165 233 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+    .to-fuchsia-500 { --tw-gradient-to: #2563eb var(--tw-gradient-to-position) !important; }
+    .locked-blur {
+      filter: blur(4px);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="bg-indigo-50 min-h-screen text-slate-800 font-sans">
+
+  <!-- 主容器 -->
+  <div id="app" class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+    
+    <!-- 導覽與狀態列 -->
+    <header class="flex flex-col sm:flex-row justify-between items-center bg-white rounded-2xl p-4 mb-6 shadow-sm border border-indigo-100 gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-indigo-600 text-white p-3 rounded-xl shadow-md shadow-indigo-200">
+          <i class="fa-solid fa-calculator text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-slate-800 font-sans">9x9 乘法極限練習器</h1>
+          <p class="text-xs text-slate-500 font-medium font-sans">活潑練習、即時回饋、弱點追蹤與排行榜管理！</p>
+        </div>
+      </div>
+      
+      <!-- 使用者狀態 & 音效 & IP & 後台按鈕 -->
+      <div class="flex flex-wrap items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 text-sm w-full sm:w-auto justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-user-circle text-indigo-500 text-lg"></i>
+          <span id="user-display-name" class="font-medium text-slate-700 font-bold">載入中...</span>
+          <!-- 切換使用者登出按鈕 -->
+          <button onclick="logoutProfile()" class="text-xs text-rose-500 hover:text-rose-700 underline font-extrabold ml-1.5 flex items-center gap-0.5">
+            <i class="fa-solid fa-right-from-bracket"></i> 切換
+          </button>
+        </div>
+        
+        <!-- 音效切換 -->
+        <button onclick="toggleMute()" id="mute-btn" class="text-slate-500 hover:text-indigo-600 transition px-2 py-1 bg-white rounded-lg border border-slate-200 text-xs flex items-center gap-1 font-sans">
+          <i class="fa-solid fa-volume-high text-emerald-500"></i> 音效：開
+        </button>
+
+        <!-- 管理員後台按鈕 -->
+        <button onclick="openAdminModal()" class="text-indigo-600 hover:text-indigo-800 transition px-2 py-1 bg-indigo-50 rounded-lg border border-indigo-100 text-xs flex items-center gap-1 font-bold font-sans">
+          <i class="fa-solid fa-user-gear"></i> 後台管理
+        </button>
+
+        <div class="text-xs text-slate-400 border-l pl-3 border-slate-200 font-mono" id="user-ip-display">
+          IP: 偵測中...
+        </div>
+      </div>
+    </header>
+
+    <!-- 每日挑戰強制解鎖橫幅提示 -->
+    <div id="daily-lock-banner" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-2xl mb-6 shadow-md items-center justify-between gap-4 hidden">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl animate-bounce">🔒</span>
+        <div>
+          <h4 class="font-bold">今日每日挑戰尚未完成！</h4>
+          <p class="text-xs opacity-90 font-sans">依據老師規定，你必須先完成每日挑戰，才能解鎖自由練習模式與排行榜唷！</p>
+        </div>
+      </div>
+      <button onclick="startDailyChallenge()" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm shadow-md hover:bg-orange-50 transition shrink-0">
+        立即開始挑戰
+      </button>
+    </div>
+
+    <!-- 登入與設定暱稱區 -->
+    <section id="login-panel" class="bg-white rounded-3xl p-8 shadow-xl border border-indigo-100 text-center max-w-md mx-auto my-12 hidden">
+      <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+        <i class="fa-solid fa-graduation-cap"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-2 text-indigo-950 font-sans">乘法練習生登入</h2>
+      <p class="text-slate-500 text-xs mb-6 font-sans">歡迎使用乘法極限練習器，請輸入暱稱與 5 碼認證碼即可開始。第一次使用會自動建立帳號；之後同暱稱需輸入相同認證碼。</p>
+      
+      <!-- 智慧多角色選取區 -->
+      <div id="quick-profiles-section" class="mb-6 hidden text-left bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+        <label class="block text-xs font-extrabold text-indigo-600 mb-3 flex items-center gap-1.5 font-sans">
+          <i class="fa-solid fa-users-viewfinder text-sm animate-pulse"></i> 偵測到本機常用練習生：點選後會帶入暱稱，仍需輸入認證碼登入
+        </label>
+        <div id="quick-profiles-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+          <!-- JS 動態生成角色選取按鈕 -->
+        </div>
+        <div class="mt-4 border-t pt-3 border-indigo-100/40 font-sans text-center">
+          <button onclick="toggleManualNickname('create')" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold inline-flex items-center justify-center gap-1">
+            <i class="fa-solid fa-key text-xs"></i> 輸入暱稱與認證碼
+          </button>
+        </div>
+      </div>
+
+      <!-- 新增/手動輸入暱稱區 -->
+      <div id="manual-nickname-container" class="space-y-4 mb-6 text-left">
+        <div id="create-role-fields" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2 font-sans"><i class="fa-solid fa-pencil"></i> 1. 輸入練習生暱稱（第一次會自動建立）</label>
+            <input type="text" id="nickname-input" class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-center text-lg font-sans font-bold" placeholder="請輸入名字..." maxlength="15">
+          </div>
+          <!-- 🔑 新增：可自行輸入配對碼功能（含隨機產生輔助） -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2 font-sans flex justify-between items-center">
+              <span><i class="fa-solid fa-key"></i> 2. 5 位數認證碼（大寫英數字）</span>
+              <button type="button" onclick="fillRandomPairingCode()" class="text-indigo-600 hover:text-indigo-800 font-extrabold text-[10px] underline flex items-center gap-0.5">
+                <i class="fa-solid fa-dice text-[9px]"></i> 隨機產生
+              </button>
+            </label>
+            <input type="text" id="nickname-code-input" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-center font-mono font-bold tracking-widest uppercase text-base" placeholder="輸入或隨機產生 5 碼..." maxlength="5">
+            <p class="text-[9px] text-slate-400 mt-1 font-sans">※ 第一次會自動建立；之後用同暱稱登入時，需輸入相同認證碼。</p>
+          </div>
+        </div>
+
+        <div id="import-role-fields" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2 font-sans"><i class="fa-solid fa-user"></i> 輸入要匯入的舊練習生暱稱：</label>
+            <input type="text" id="import-nickname-input" class="w-full px-4 py-2 border rounded-xl outline-none text-center font-bold text-sm" placeholder="輸入舊名字...">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2 font-sans"><i class="fa-solid fa-key"></i> 輸入 5 位數智慧配對碼：</label>
+            <input type="text" id="import-code-input" class="w-full px-4 py-2 border rounded-xl outline-none text-center font-mono font-bold text-sm tracking-widest uppercase" placeholder="例如：E8Z92" maxlength="5">
+          </div>
+        </div>
+
+        <div id="back-to-profiles-btn-container" class="text-center mt-2 hidden">
+          <button onclick="toggleManualNickname('cancel')" class="text-slate-400 hover:text-indigo-600 text-xs font-semibold flex items-center justify-center gap-1 mx-auto font-sans">
+            <i class="fa-solid fa-arrow-left"></i> 返回常用角色列表
+          </button>
+        </div>
+      </div>
+
+      <button id="btn-save-profile" onclick="submitNewProfileCreation()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 text-lg font-sans">
+        登入 / 建立帳號 <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </section>
+
+    <!-- 主選單區 -->
+    <section id="menu-panel" class="space-y-6 hidden">
+      
+      <!-- 每日必修任務 -->
+      <div id="daily-challenge-box" class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white p-6 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden hidden font-sans">
+        <div class="absolute -right-8 -bottom-8 text-white opacity-10 text-9xl font-bold game-font select-none">DAILY</div>
+        <div class="relative z-10 space-y-2">
+          <div class="flex items-center gap-2">
+            <span class="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-bold">✨ 今日必修</span>
+            <span id="daily-status-badge" class="text-xs bg-red-600 px-2 py-1 rounded font-bold">尚未完成</span>
+          </div>
+          <h3 class="text-2xl font-extrabold font-sans">每日極限任務</h3>
+          <p class="text-sm text-amber-50 leading-relaxed max-w-xl font-sans">
+            老師指派的每日不重複亂數任務！每天第一次練習必完成此項目，完成後可解鎖更多進階模式與排行榜。
+          </p>
+        </div>
+        <button onclick="startDailyChallenge()" class="w-full md:w-auto bg-white text-orange-600 font-extrabold py-3.5 px-8 rounded-2xl text-lg hover:bg-orange-50 transition shadow-lg shrink-0 text-center relative z-10 font-sans">
+          開始每日任務 (<span id="daily-count-label">25</span>題)
+        </button>
+      </div>
+
+      <!-- 模式選擇 -->
+      <div id="modes-grid-container" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- 熟悉模式 -->
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-indigo-100 flex flex-col justify-between hover:shadow-md transition">
+          <div>
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl mb-4">
+              <i class="fa-solid fa-arrow-down-1-9"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2 font-sans">加強熟悉模式</h3>
+            <p class="text-slate-500 text-sm mb-4 leading-relaxed font-sans">
+              依序從 2 × 2 練習到 9 × 9，支援鎖定單一數字，也可使用同一份弱點題庫進行特訓！
+            </p>
+            
+            <!-- 熟悉模式設定擴充 -->
+            <div class="mb-4 space-y-2 border-t pt-4 border-slate-100 text-xs">
+              <span class="block font-bold text-slate-700 mb-1 font-sans">🎯 選擇熟悉範圍：</span>
+              <div class="grid grid-cols-2 gap-2 font-sans">
+                <button onclick="setSequentialRange('all')" id="seq-btn-all" class="seq-opt-btn bg-emerald-600 text-white py-1.5 rounded-lg font-bold border border-emerald-500">
+                  全套基礎 (64題)
+                </button>
+                <button onclick="setSequentialRange('smart')" id="seq-btn-smart" class="seq-opt-btn bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg font-semibold border border-slate-200">
+                  弱點題庫特訓
+                </button>
+              </div>
+              <div class="flex items-center gap-2 mt-2 font-sans">
+                <span class="text-slate-500 shrink-0">指定練習乘數：</span>
+                <select id="seq-digit-select" onchange="setSequentialRange('digit')" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1 outline-none text-slate-700 font-bold font-mono text-xs">
+                  <option value="" disabled selected>選擇數字...</option>
+                  <option value="2">2 的乘法</option>
+                  <option value="3">3 的乘法</option>
+                  <option value="4">4 的乘法</option>
+                  <option value="5">5 的乘法</option>
+                  <option value="6">6 的乘法</option>
+                  <option value="7">7 的乘法</option>
+                  <option value="8">8 的乘法</option>
+                  <option value="9">9 的乘法</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button onclick="startPractice('sequential')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl transition shadow-lg shadow-emerald-100 font-sans">
+            啟動循序練習 (<span id="seq-count-label">64</span>題)
+          </button>
+        </div>
+
+        <!-- 挑戰模式 (基礎 2-9 亂數) -->
+        <div class="bg-indigo-900 text-white p-6 rounded-3xl shadow-lg flex flex-col justify-between relative overflow-hidden font-sans">
+          <div class="absolute -right-8 -bottom-8 text-indigo-800 opacity-20 text-9xl font-bold game-font">
+            9x9
+          </div>
+          <div class="relative z-10 font-sans">
+            <div class="flex justify-between items-start mb-4">
+              <div class="w-12 h-12 bg-white/10 text-yellow-300 rounded-xl flex items-center justify-center text-xl">
+                <i class="fa-solid fa-bolt font-sans"></i>
+              </div>
+              <span class="bg-yellow-400 text-indigo-950 text-xs px-2.5 py-1 rounded-full font-bold font-sans">主流挑戰</span>
+            </div>
+            <h3 class="text-lg font-bold mb-2 font-sans">極限挑戰模式</h3>
+            <p class="text-indigo-200 text-sm mb-4 leading-relaxed font-sans">
+              基礎 2 ~ 9 乘法完全亂數！支援時間競速、精準弱點卡頓與排行！
+            </p>
+            
+            <!-- 題數選擇 (25, 40, 全部) -->
+            <div class="mb-6">
+              <label class="block text-xs text-indigo-300 mb-2">選擇挑戰題數：</label>
+              <div class="grid grid-cols-3 gap-2 font-mono">
+                <button onclick="setChallengeQuestions(25)" id="q-btn-25" class="q-limit-btn bg-indigo-600 text-white py-1.5 rounded-lg text-sm font-semibold border border-indigo-400 font-sans">25 題</button>
+                <button onclick="setChallengeQuestions(40)" id="q-btn-40" class="q-limit-btn bg-white/20 hover:bg-white/30 text-white py-1.5 rounded-lg text-sm font-semibold border border-white/10 font-sans">40 題</button>
+                <button onclick="setChallengeQuestions(64)" id="q-btn-all" class="q-limit-btn bg-white/20 hover:bg-white/30 text-white py-1.5 rounded-lg text-sm font-semibold border border-white/10 font-sans">全部 64 題</button>
+              </div>
+            </div>
+          </div>
+          <button onclick="startPractice('challenge')" class="w-full bg-yellow-400 hover:bg-yellow-500 text-indigo-950 font-bold py-3 rounded-2xl transition shadow-lg shadow-yellow-400/20 relative z-10 text-center font-sans">
+            發起基礎挑戰
+          </button>
+        </div>
+
+        <!-- 超級極限挑戰模式 -->
+        <div id="super-mode-card" class="bg-gradient-to-br from-purple-900 to-indigo-950 text-white p-6 rounded-3xl shadow-lg flex flex-col justify-between relative overflow-hidden font-sans">
+          <div class="absolute -right-8 -bottom-8 text-purple-800 opacity-20 text-9xl font-bold game-font">
+            19x9
+          </div>
+          <div class="relative z-10 font-sans">
+            <div class="flex justify-between items-start mb-4 font-sans">
+              <div class="w-12 h-12 bg-white/10 text-fuchsia-300 rounded-xl flex items-center justify-center text-xl">
+                <i class="fa-solid fa-gauge-high"></i>
+              </div>
+              <span class="bg-fuchsia-500 text-white text-xs px-2.5 py-1 rounded-full font-bold">神速高手</span>
+            </div>
+            <h3 class="text-lg font-bold mb-2 font-sans">超級極限挑戰</h3>
+            <p class="text-indigo-200 text-sm mb-4 leading-relaxed font-sans">
+              解鎖雙位數乘法！ 11 ~ 19 × 2 ~ 9 完全亂數，快速激發潛在數學腦力！
+            </p>
+            
+            <!-- 超級題數選擇 (25, 40, 全部) -->
+            <div class="mb-6 font-sans">
+              <label class="block text-xs text-purple-300 mb-2">選擇挑戰題數：</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button onclick="setSuperQuestions(25)" id="sq-btn-25" class="sq-limit-btn bg-purple-600 text-white py-1.5 rounded-lg text-sm font-semibold border border-purple-400">25 題</button>
+                <button onclick="setSuperQuestions(40)" id="sq-btn-40" class="sq-limit-btn bg-white/20 hover:bg-white/30 text-white py-1.5 rounded-lg text-sm font-semibold border border-white/10 font-sans">40 題</button>
+                <button onclick="setSuperQuestions(72)" id="sq-btn-all" class="sq-limit-btn bg-white/20 hover:bg-white/30 text-white py-1.5 rounded-lg text-sm font-semibold border border-white/10 font-sans">全部 72 題</button>
+              </div>
+            </div>
+          </div>
+          <button onclick="startPractice('super')" class="w-full bg-gradient-to-r from-pink-500 to-fuchsia-500 hover:from-pink-600 hover:to-fuchsia-600 text-white font-bold py-3 rounded-2xl transition shadow-lg shadow-fuchsia-500/20 relative z-10 text-center font-sans">
+            發起超級挑戰
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 分頁頁籤：弱點分析、排行榜、歷史紀錄 -->
+      <div id="content-tabs-container" class="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 animate-fade-in font-sans">
+        <div class="flex border-b border-slate-100 mb-6 overflow-x-auto whitespace-nowrap">
+          <button onclick="switchTab('weakness')" id="tab-weakness" class="tab-btn px-4 py-2 border-b-2 border-indigo-600 text-indigo-600 font-bold text-sm md:text-base mr-4 pb-3">
+            <i class="fa-solid fa-circle-exclamation mr-1.5"></i> 我的乘法弱點熱圖
+          </button>
+          <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-500 font-medium text-sm md:text-base mr-4 pb-3 hover:text-slate-800">
+            <i class="fa-solid fa-trophy mr-1.5"></i> 班級神速排行榜
+          </button>
+          <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-4 py-2 border-b-2 border-transparent text-slate-500 font-medium text-sm md:text-base pb-3 hover:text-slate-800">
+            <i class="fa-solid fa-chart-line mr-1.5"></i> 每日成長軌跡
+          </button>
+        </div>
+
+        <!-- Tab 1: 弱點分析 -->
+        <div id="panel-weakness" class="tab-content block animate-fade-in">
+          <div class="flex flex-col lg:flex-row gap-6 items-start">
+            <div class="flex-1 w-full">
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                <div>
+                  <h4 class="font-bold text-slate-800 mb-1">九九乘法智慧分析網格</h4>
+                  <p class="text-xs text-slate-500">
+                    點擊網格可以看該乘法組合的詳細數據，灰色代表尚未練習過。
+                  </p>
+                </div>
+                <!-- 網格模式切換 -->
+                <div class="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 text-xs">
+                  <button onclick="switchWeaknessView('basic')" id="weak-view-basic" class="weak-view-btn bg-white px-3 py-1.5 rounded-lg font-bold text-indigo-600 shadow-sm">
+                    基礎乘法 (2-9)
+                  </button>
+                  <button onclick="switchWeaknessView('super')" id="weak-view-super" class="weak-view-btn px-3 py-1.5 rounded-lg font-medium text-slate-500">
+                    超級乘法 (11-19)
+                  </button>
+                </div>
+              </div>
+
+              <!-- 時間篩選與指標切換列 -->
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs">
+                <!-- 時間區分篩選器 -->
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500 font-bold shrink-0">時間區段:</span>
+                  <div class="bg-slate-200 p-0.5 rounded-lg flex gap-0.5 font-sans">
+                    <button onclick="switchTimeFilter('today')" id="time-filter-today" class="time-filter-btn px-2.5 py-1 rounded text-slate-600 font-medium font-sans">今日</button>
+                    <button onclick="switchTimeFilter('5days')" id="time-filter-5days" class="time-filter-btn px-2.5 py-1 rounded text-slate-600 font-medium font-sans">近5日</button>
+                    <button onclick="switchTimeFilter('15days')" id="time-filter-15days" class="time-filter-btn px-2.5 py-1 rounded text-slate-600 font-medium font-sans">近15日</button>
+                    <button onclick="switchTimeFilter('all')" id="time-filter-all" class="time-filter-btn bg-white text-indigo-600 shadow-sm font-bold px-2.5 py-1 rounded font-sans">全體</button>
+                  </div>
+                </div>
+
+                <!-- 指標切換 (錯誤次數 / 卡頓時間) -->
+                <div class="bg-slate-200 p-0.5 rounded-lg flex gap-0.5">
+                  <button onclick="switchWeaknessMetric('errors')" id="weak-metric-errors" class="weak-metric-btn bg-white px-3 py-1 rounded font-bold text-indigo-600 shadow-sm">
+                    ❌ 錯誤次數
+                  </button>
+                  <button onclick="switchWeaknessMetric('time')" id="weak-metric-time" class="weak-metric-btn px-3 py-1 rounded font-medium text-slate-500">
+                    ⏱️ 平均反應秒數
+                  </button>
+                </div>
+                <div class="w-full text-[10px] text-slate-500 flex flex-wrap gap-1 items-center pt-1">
+                  <span class="font-bold mr-1">反應時間顏色：</span>
+                  <span class="time-grade-0 px-2 py-0.5 rounded">5秒內｜精熟</span>
+                  <span class="time-grade-1 px-2 py-0.5 rounded">5–10秒｜稍慢</span>
+                  <span class="time-grade-2 px-2 py-0.5 rounded">10–20秒｜需練習</span>
+                  <span class="time-grade-3 px-2 py-0.5 rounded">20秒以上｜重點加強</span>
+                </div>
+
+              </div>
+              
+              <!-- 網格容器 -->
+              <div class="overflow-x-auto font-mono">
+                <div class="min-w-[320px] max-w-[500px] mx-auto bg-slate-100 p-3 rounded-2xl border border-slate-200">
+                  <!-- 欄指標 -->
+                  <div id="heatmap-cols" class="grid text-center font-bold text-xs text-slate-400 mb-1 font-mono">
+                    <!-- 動態產出 -->
+                  </div>
+                  <!-- 列與內容 -->
+                  <div id="heatmap-grid" class="space-y-1">
+                    <!-- JS 動態生成 -->
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 智慧弱點與特訓側邊欄 -->
+            <div class="w-full lg:w-72 flex flex-col gap-4 shrink-0 font-sans">
+              <!-- 特訓按鈕 -->
+              <button onclick="startWeaknessSpecialTraining()" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-blue-100 flex items-center justify-center gap-2 transition transform hover:-translate-y-0.5">
+                <i class="fa-solid fa-bullseye text-lg animate-pulse"></i> 🎯 啟動弱點題庫特訓 (10題)
+              </button>
+
+              <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                <h5 class="font-bold text-slate-700 mb-3 text-xs" id="weakness-top-title"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> 基礎不熟數字排名 (常錯)</h5>
+                <div id="top-weak-list" class="space-y-2 text-xs text-slate-600 mb-4 font-mono">
+                  <!-- JS 動態填入 -->
+                  <p class="text-slate-400 py-3 font-sans">太棒了！目前還沒有答錯的紀錄唷！</p>
+                </div>
+
+                <h5 class="font-bold text-slate-700 mb-3 border-t pt-3 border-slate-200 text-xs" id="weakness-top-time-title"><i class="fa-regular fa-clock text-indigo-500 mr-1"></i> 基礎猶豫數字排名 (卡頓)</h5>
+                <div id="top-weak-time-list" class="space-y-2 text-xs text-slate-600 font-mono">
+                  <!-- JS 動態填入 -->
+                  <p class="text-slate-400 py-3 font-sans">太棒了！目前還沒有答題秒數紀錄唷！</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: 排行榜 -->
+        <div id="panel-leaderboard" class="tab-content hidden animate-fade-in font-sans">
+          <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <div>
+              <h4 class="font-bold text-slate-800 text-lg">極限挑戰英雄榜</h4>
+              <p class="text-xs text-slate-500">精準依據每題期望花費時間排序！</p>
+            </div>
+            
+            <!-- 排行榜題數篩選器 -->
+            <div class="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 text-xs font-mono font-sans">
+              <button onclick="setLeaderboardFilter('all')" id="leader-filter-all" class="leader-filter-btn bg-white px-2.5 py-1.5 rounded-lg font-bold text-indigo-600 shadow-sm font-sans">
+                總排名
+              </button>
+              <button onclick="setLeaderboardFilter(25)" id="leader-filter-25" class="leader-filter-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-500 font-sans">
+                25題
+              </button>
+              <button onclick="setLeaderboardFilter(40)" id="leader-filter-40" class="leader-filter-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-500 font-sans">
+                40題
+              </button>
+              <button onclick="setLeaderboardFilter(50)" id="leader-filter-50" class="leader-filter-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-500 font-sans">
+                50題
+              </button>
+              <button onclick="setLeaderboardFilter('full')" id="leader-filter-full" class="leader-filter-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-500 font-sans">
+                全部題目
+              </button>
+            </div>
+          </div>
+          
+          <div class="bg-indigo-950/5 p-4 rounded-2xl mb-4 text-xs text-indigo-900 border border-indigo-100 flex items-center gap-2 font-sans">
+            <span class="text-base">💡</span>
+            <span>
+              <strong>加權秒數算法：</strong> 
+              <code class="bg-indigo-900/10 text-indigo-950 px-2 py-0.5 rounded font-bold font-mono">（平均每題時間 * 100） * (100 / 正確率%)</code>。
+              代表「答對一題所需要的期望平均毫秒數」，<strong>分數越低代表實力越強（速度快、且零失誤）</strong>！
+            </span>
+          </div>
+
+          <!-- 排行榜列表 -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm font-sans">
+              <thead>
+                <tr class="text-slate-400 font-medium border-b border-slate-100">
+                  <th class="py-2 px-3">排名</th>
+                  <th class="py-2 px-3">玩家暱稱</th>
+                  <th class="py-2 px-3 text-center">模式</th>
+                  <th class="py-2 px-3 text-center">題數</th>
+                  <th class="py-2 px-3 text-center">正確率</th>
+                  <th class="py-2 px-3 text-center">每題平均秒數</th>
+                  <th class="py-2 px-3 text-right text-indigo-600">加權秒數得分 (越低越好)</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-tbody" class="divide-y divide-slate-100">
+                <!-- JS 動態加載 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: 歷史紀錄 -->
+        <div id="panel-history" class="tab-content hidden animate-fade-in font-sans">
+          <h4 class="font-bold text-slate-800 mb-1">我的每日鍛鍊紀錄</h4>
+          <p class="text-xs text-slate-500 mb-6 leading-relaxed">點滴累積，每天只要花 3 分鐘，見證自我神速進化的成長足跡！</p>
+          
+          <div class="overflow-x-auto font-mono text-xs">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="text-slate-400 font-medium border-b border-slate-100 font-sans">
+                  <th class="py-2 px-3 text-left">練習日期</th>
+                  <th class="py-2 px-3 text-left font-sans">模式</th>
+                  <th class="py-2 px-3 text-center font-sans font-sans">挑戰題數</th>
+                  <th class="py-2 px-3 text-center font-sans font-sans">正確率</th>
+                  <th class="py-2 px-3 text-center font-sans font-sans font-sans">花費時間</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody" class="divide-y divide-slate-100">
+                <!-- JS 動態加載 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 遊戲中面板 -->
+    <section id="game-panel" class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-indigo-100 hidden font-sans">
+      <!-- 頂部資訊列 -->
+      <div class="flex justify-between items-center mb-6">
+        <button onclick="quitGameModal()" class="text-slate-400 hover:text-slate-600 transition flex items-center gap-1 text-sm font-semibold">
+          <i class="fa-solid fa-chevron-left"></i> 放棄退出
+        </button>
+        <!-- 計時器 -->
+        <div class="bg-indigo-50 px-4 py-1.5 rounded-full text-indigo-700 font-bold flex items-center gap-2 text-sm sm:text-base">
+          <i class="fa-regular fa-clock"></i>
+          <span id="game-timer" class="number-font">00:00.00</span>
+        </div>
+      </div>
+
+      <!-- 進度條 -->
+      <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-6 flex">
+        <div id="game-progress" class="bg-indigo-600 h-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-slate-400 mb-8 font-sans">
+        <span id="game-progress-text">第 0 / 25 題</span>
+        <span id="game-mode-name" class="font-bold text-indigo-600">挑戰模式 (亂數)</span>
+      </div>
+
+      <!-- 核心出題卡片 -->
+      <div class="text-center py-6 md:py-10 bg-indigo-50/40 rounded-2xl mb-6 relative">
+        <!-- 答題反饋圖示動畫 -->
+        <div id="feedback-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-all duration-200">
+          <span id="feedback-icon" class="text-7xl animate-ping"></span>
+        </div>
+
+        <div class="game-font text-5xl md:text-7xl font-bold tracking-wider text-slate-800 flex items-center justify-center gap-3 select-none">
+          <span id="num-1" class="number-font">7</span>
+          <span class="text-indigo-500">×</span>
+          <span id="num-2" class="number-font">8</span>
+          <span class="text-slate-400">=</span>
+          <span id="answer-display" class="number-font text-indigo-600 border-b-4 border-indigo-400 px-4 min-w-[80px] h-16 md:h-20 inline-block text-center leading-none">?</span>
+        </div>
+      </div>
+
+      <!-- 觸控按鍵區 (計算機標準鍵盤 7-8-9 在上) -->
+      <div class="max-w-sm mx-auto">
+        <div class="grid grid-cols-3 gap-3 mb-3">
+          <button onclick="pressKey('7')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">7</button>
+          <button onclick="pressKey('8')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">8</button>
+          <button onclick="pressKey('9')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">9</button>
+          
+          <button onclick="pressKey('4')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">4</button>
+          <button onclick="pressKey('5')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">5</button>
+          <button onclick="pressKey('6')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">6</button>
+          
+          <button onclick="pressKey('1')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">1</button>
+          <button onclick="pressKey('2')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">2</button>
+          <button onclick="pressKey('3')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">3</button>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <button onclick="pressKey('backspace')" class="bg-rose-100 hover:bg-rose-200 active:scale-95 text-rose-800 font-bold py-4 rounded-xl text-lg transition transform flex items-center justify-center gap-1 font-sans">
+            <i class="fa-solid fa-delete-left animate-pulse"></i> 退格
+          </button>
+          <button onclick="pressKey('0')" class="bg-slate-100 hover:bg-indigo-100 active:scale-95 text-slate-800 font-bold py-4 rounded-xl text-xl transition transform game-font">0</button>
+          <button onclick="pressKey('enter')" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold py-4 rounded-xl text-lg transition transform flex items-center justify-center gap-1 shadow-md shadow-indigo-100 font-sans">
+            送出 <i class="fa-solid fa-check font-sans"></i>
+          </button>
+        </div>
+        <p class="text-center text-xs text-slate-400 mt-4 font-sans"><i class="fa-regular fa-keyboard font-sans"></i> 電腦版可直接使用右側數字鍵</p>
+      </div>
+    </section>
+
+    <!-- 結算畫面 -->
+    <section id="result-panel" class="bg-white rounded-3xl p-8 shadow-xl border border-indigo-100 text-center max-w-lg mx-auto hidden animate-fade-in font-sans">
+      <div class="w-24 h-24 bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 text-5xl animate-bounce">
+        <i class="fa-solid fa-trophy animate-bounce"></i>
+      </div>
+      <h2 class="text-3xl font-bold text-slate-800 mb-1">挑戰完成！</h2>
+      <p id="result-mode" class="text-indigo-600 font-medium text-sm mb-6 font-sans">挑戰模式</p>
+
+      <!-- 成績數據面板 -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-50 font-sans">
+          <div class="text-xs text-slate-400 mb-1 font-sans"><i class="fa-regular fa-clock"></i> 總花費時間</div>
+          <div id="result-time" class="text-2xl font-bold text-slate-800 number-font">00:32.41</div>
+        </div>
+        <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-50 font-sans">
+          <div class="text-xs text-slate-400 mb-1 font-sans"><i class="fa-solid fa-circle-check"></i> 答題正確率</div>
+          <div id="result-accuracy" class="text-2xl font-bold text-slate-800 number-font">95%</div>
+        </div>
+      </div>
+
+      <!-- 綜合評分 -->
+      <div class="bg-indigo-900 text-white rounded-2xl p-4 mb-8">
+        <div class="text-xs text-indigo-300 font-sans">本次戰績加權得分 (越低越好)</div>
+        <div id="result-weighted-score" class="text-3xl font-extrabold number-font my-1">150.5</div>
+        <div class="text-[10px] text-indigo-200 font-mono">計算公式：(平均每題時間(秒)*100) * (100 / 正確率%)</div>
+      </div>
+
+      <!-- 面板操作 -->
+      <div class="flex flex-col sm:flex-row gap-3 font-sans">
+        <button onclick="backToMenu()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 px-6 rounded-xl transition font-sans">
+          返回主選單
+        </button>
+        <button onclick="retryGame()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-lg shadow-indigo-100 font-sans">
+          再挑戰一次
+        </button>
+      </div>
+    </section>
+
+    <!-- 管理員後台 Modal -->
+    <div id="admin-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-3xl p-6 max-w-5xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in font-sans">
+        <div class="flex justify-between items-center border-b pb-4 mb-2">
+          <h3 class="text-xl font-bold text-indigo-950 flex items-center gap-2 font-sans">
+            <i class="fa-solid fa-user-gear text-indigo-600 font-sans"></i> 後台管理中心 (已同步雲端)
+          </h3>
+          <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- 登入介面 -->
+        <div id="admin-login-box" class="space-y-4 py-8 max-w-sm mx-auto text-center">
+          <p class="text-sm text-slate-500 font-sans font-sans">請輸入管理員帳號密碼進行驗證</p>
+          <input type="text" id="admin-user-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="後台帳號，可留空">
+          <input type="password" id="admin-pass-input" class="w-full px-4 py-2 border rounded-xl outline-none" placeholder="此裝置後台通行碼">
+          <p class="text-[10px] text-slate-400 leading-relaxed">GitHub 公開版不再內建固定後台密碼。第一次在此裝置輸入的通行碼會成為後台通行碼；請勿讓學生使用管理者裝置。</p>
+          <button onclick="verifyAdminLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl transition font-sans font-sans">驗證登入</button>
+        </div>
+
+        <!-- 後台主要管理功能區 (分頁機制) -->
+        <div id="admin-dashboard-box" class="hidden flex-1 flex flex-col overflow-hidden space-y-4">
+          <!-- 後台分頁按鈕 -->
+          <div class="flex border-b border-slate-100 text-xs gap-2">
+            <button onclick="switchAdminTab('controls')" id="admin-tab-controls" class="admin-nav-btn px-4 py-2 border-b-2 border-indigo-600 text-indigo-600 font-bold font-sans font-sans">
+              <i class="fa-solid fa-sliders mr-1"></i> 參數與黑名單控制
+            </button>
+            <button onclick="switchAdminTab('users')" id="admin-tab-users" class="admin-nav-btn px-4 py-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-800 font-sans font-sans">
+              <i class="fa-solid fa-users mr-1"></i> 練習生角色管理
+            </button>
+            <button onclick="switchAdminTab('scores')" id="admin-tab-scores" class="admin-nav-btn px-4 py-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-800 font-sans font-sans">
+              <i class="fa-solid fa-list-check mr-1"></i> 全體歷程數據
+            </button>
+          </div>
+
+          <!-- 分頁 A：參數與黑名單控制 -->
+          <div id="admin-panel-controls" class="admin-tab-panel grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto">
+            <!-- 參數控制 -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4 font-sans">
+              <h4 class="font-bold text-slate-800 text-xs border-b pb-2"><i class="fa-solid fa-sliders"></i> 全域功能控管</h4>
+              
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-600 font-semibold font-sans font-sans">顯示「超級極限挑戰 (11-19)」</span>
+                <label class="relative inline-flex items-center cursor-pointer font-sans">
+                  <input type="checkbox" id="admin-toggle-super" class="sr-only peer animate-fade-in" onchange="updateAdminSettings()">
+                  <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between border-t pt-3 text-xs">
+                <span class="text-slate-600 font-semibold font-sans font-sans font-sans">強制完成「每日首入任務」</span>
+                <label class="relative inline-flex items-center cursor-pointer font-sans">
+                  <input type="checkbox" id="admin-toggle-daily" class="sr-only peer" onchange="updateAdminSettings()">
+                  <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between border-t pt-3 text-xs">
+                <span class="text-slate-600 font-semibold font-sans font-sans font-sans">每日挑戰預設題數</span>
+                <input type="number" id="admin-daily-count" min="5" max="80" class="w-20 px-2 py-1 border rounded-lg text-center font-bold font-mono text-sm" onchange="updateAdminSettings()">
+              </div>
+              
+              <!-- 🚫 黑名單管理區 -->
+              <div class="border-t pt-4 space-y-3 font-sans">
+                <h5 class="font-extrabold text-rose-600 text-xs flex items-center gap-1.5 font-sans">
+                  <i class="fa-solid fa-ban font-sans"></i> 🚫 全域黑名單管理
+                </h5>
+                <p class="text-[10px] text-slate-400 font-sans">被列入黑名單的暱稱將在所有裝置上強制登出且無法登入。</p>
+                <div class="flex gap-2">
+                  <input type="text" id="blacklist-add-input" class="flex-1 px-3 py-1.5 border rounded-lg text-xs outline-none" placeholder="輸入要禁用的練習生暱稱...">
+                  <button onclick="addNicknameToBlacklist()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition font-sans font-sans">禁用</button>
+                </div>
+                <div id="admin-blacklist-items" class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  <!-- JS 動態加載禁用名單 -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 雲端試算表備份 -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between space-y-4 col-span-1">
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm border-b pb-2"><i class="fa-solid fa-cloud"></i> Google 試算表實時同步</h4>
+                <div class="mt-2 space-y-2 text-xs">
+                  <p class="text-slate-500 leading-relaxed font-sans font-sans">
+                    在下方填入您的 <strong>Google Apps Script 網頁 API 網址</strong>，即可實現與 Google 試算表的自動實時備份！
+                  </p>
+                  <div>
+                    <label class="block text-[10px] text-slate-400 font-bold mb-1">Google Apps Script Web App URL：</label>
+                    <input type="text" id="admin-gas-url" class="w-full px-3 py-1.5 border rounded-lg outline-none font-mono text-[10px]" placeholder="https://script.google.com/macros/s/.../exec" onchange="saveGasUrl()">
+                  </div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="syncToGoogleSheets()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow transition font-sans">
+                  <i class="fa-solid fa-sync animate-spin-slow"></i> 同步到試算表
+                </button>
+                <button onclick="exportScoresToCSV()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow transition font-sans font-sans">
+                  <i class="fa-solid fa-file-excel font-sans"></i> 匯出 CSV 檔
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分頁 B：練習生管理 -->
+          <div id="admin-panel-users" class="admin-tab-panel hidden flex-1 flex flex-col overflow-hidden space-y-3 animate-fade-in font-sans">
+            <div class="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
+              <!-- 學生帳號列表 -->
+              <div class="flex-1 overflow-auto border border-slate-100 rounded-xl bg-slate-50 p-3 max-h-[50vh] lg:max-h-full">
+                <h5 class="font-bold text-slate-800 text-xs mb-2 font-sans font-sans font-sans">👥 活躍練習生清單：</h5>
+                <div id="admin-users-list" class="space-y-2">
+                  <!-- JS 動態生成 -->
+                </div>
+              </div>
+              <!-- 學生專屬作答詳情 -->
+              <div class="w-full lg:w-96 border border-slate-100 rounded-xl bg-slate-50 p-4 flex flex-col justify-between overflow-hidden">
+                <div class="flex-1 overflow-auto space-y-3 font-sans font-sans font-sans" id="admin-user-detail-container">
+                  <div class="text-center py-12 text-slate-400 text-xs">
+                    <i class="fa-solid fa-magnifying-glass text-2xl mb-2 block"></i>
+                    請點選左側練習生的「查看詳情」來檢索其完整答題資料
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分頁 C：全體歷程數據 -->
+          <div id="admin-panel-scores" class="admin-tab-panel hidden flex-1 flex flex-col overflow-hidden animate-fade-in animate-fade-in">
+            <h4 class="font-bold text-slate-800 text-xs mb-2 flex justify-between items-center font-sans font-sans font-sans">
+              <span>📊 雲端排行榜數據庫：</span>
+              <span id="admin-sync-time" class="text-[10px] text-slate-400 font-normal font-sans">可以點選右側垃圾桶刪除特定的單筆作答紀錄</span>
+            </h4>
+            <div class="flex-1 overflow-auto border border-slate-100 rounded-xl">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-100 sticky top-0 text-slate-600 font-sans">
+                  <tr>
+                    <th class="py-2.5 px-3">日期</th>
+                    <th class="py-2.5 px-3 font-sans">暱稱</th>
+                    <th class="py-2.5 px-3 text-center">模式</th>
+                    <th class="py-2.5 px-3 text-center font-sans">題數</th>
+                    <th class="py-2.5 px-3 text-center font-sans">正確率</th>
+                    <th class="py-2.5 px-3 text-center">總耗時</th>
+                    <th class="py-2.5 px-3 text-center">加權得分</th>
+                    <th class="py-2.5 px-3 font-mono">IP 地址</th>
+                    <th class="py-2.5 px-3 text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-table-tbody" class="divide-y divide-slate-100 font-mono text-slate-700 text-xs">
+                  <!-- JS 動態加載 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 自訂對話框 -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl animate-fade-in font-sans">
+        <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h3 id="modal-title" class="text-lg font-bold mb-2">確定要退出嗎？</h3>
+        <p id="modal-message" class="text-slate-500 text-sm mb-6 leading-relaxed">目前的作答進度將不會被保存喔！</p>
+        <div class="flex gap-3 justify-center font-sans">
+          <button id="modal-btn-cancel" class="bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-xl text-sm hover:bg-slate-200 transition">取消</button>
+          <button id="modal-btn-confirm" class="bg-red-500 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-red-600 transition font-sans">確定退出</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Firebase 11.6.1 SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- Firebase 基礎環境設定 ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-9x9-challenge';
+    
+    let isMuted = false;
+
+    // ==========================================
+    // GitHub Pages / GAS 部署設定
+    // 1) 將 DEFAULT_GAS_URL 換成你部署後取得的 Apps Script Web App URL。
+    // 2) GAS_SYNC_TOKEN 必須與 Code.gs 裡的 SYNC_TOKEN 完全相同。
+    // 3) 若 DEFAULT_GAS_URL 保持空白或 GAS 失效，登入會自動降級為本機模式，仍可練習但不會雲端同步。
+    // ==========================================
+    const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyKuv3FLS9z6Bznib8kNwIOHZ8sgxRXkrR1gZM-vvHXAMTVeT0lsPEZM7HSGUkp36Uf/exec";
+    const GAS_SYNC_TOKEN = "linrich-99x9-2026";
+    const ADMIN_HASH_STORAGE_KEY = "9x9_admin_pass_hash_v2";
+    const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v2";
+    const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v2";
+    const ADMIN_MAX_FAILED_ATTEMPTS = 5;
+    const ADMIN_LOCK_MINUTES = 10;
+
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+      apiKey: "",
+      authDomain: "mock-auth-9x9.firebaseapp.com",
+      projectId: "mock-auth-9x9",
+      storageBucket: "mock-auth-9x9.appspot.com",
+      messagingSenderId: "12345678",
+      appId: "1:12345:web:12345"
+    };
+
+    let app, auth, db;
+    let useLocalStorageFallback = false;
+
+    if (!firebaseConfig || !firebaseConfig.apiKey) {
+      console.warn("未偵測到真實 Firebase 雲端金鑰，已自動啟用本機離線暫存模式。");
+      useLocalStorageFallback = true;
+    }
+
+    try {
+      if (!useLocalStorageFallback) {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+      }
+    } catch (e) {
+      console.warn("Firebase 初始化異常，啟用 LocalStorage 備份模式。", e);
+      useLocalStorageFallback = true;
+    }
+
+    // 全域變數狀態掛載
+    window.appState = {
+      user: null,
+      userId: null,
+      userIP: '0.0.0.0',
+      accountSyncMode: 'auto', // auto / gas / local；GitHub 版預設 auto，GAS 不可用時自動本機練習
+      currentMode: 'challenge', // 'sequential', 'challenge', 'super', 'weakness', 'daily'
+      challengeQuestionsCount: 25, 
+      superQuestionsCount: 25,     
+      questions: [],
+      currentQuestionIndex: 0,
+      correctCount: 0,
+      startTime: null,
+      questionStartTime: null,
+      timerInterval: null,
+      currentInput: "",
+      elapsedTimeSeconds: 0,
+      questionLogs: [], 
+      weaknesses: {}, 
+      questionTimes: {}, 
+      weaknessQuestionBank: {}, // 弱點題庫：答錯必收錄，20秒以上慢題依最近答題情況收錄
+      weaknessSlowThresholdSeconds: 20,
+      weaknessViewMode: 'basic',  
+      weaknessMetric: 'errors',   
+      weaknessTimeFilter: 'all',  
+      leaderboardFilter: 'all',   
+      seqRangeType: 'all',        
+      seqSelectedDigit: null,
+      isTransitioning: false,
+      isSavingScore: false,
+      currentSessionId: null,
+      adminSettings: {
+        hideSuperMode: true,
+        forceDailyChallenge: true,
+        dailyChallengeCount: 25,
+        gasUrl: "",
+        deletedUsers: [] 
+      },
+      hasCompletedDailyToday: false
+    };
+
+    let currentLeaderboardSort = 'weighted';
+    let isAdminLoggedIn = false;
+
+    // ==========================================
+    // 函數與 UI 操作綁定模組 
+    // (100% Hoisting 保障執行不中斷)
+    // ==========================================
+
+    function playSound(type) {
+      if (isMuted) return;
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        if (type === 'correct') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+          osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+          osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16);
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        } else if (type === 'wrong') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.25);
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.25);
+        } else if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(600, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.05);
+          gain.gain.setValueAtTime(0.08, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.05);
+        }
+      } catch (e) {
+        console.warn("音效播放受阻");
+      }
+    }
+    window.playSound = playSound;
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      const muteBtn = document.getElementById('mute-btn');
+      if (isMuted) {
+        muteBtn.innerHTML = `<i class="fa-solid fa-volume-xmark text-rose-500"></i> 音效：關`;
+      } else {
+        muteBtn.innerHTML = `<i class="fa-solid fa-volume-high text-emerald-500"></i> 音效：開`;
+        playSound('click');
+      }
+    }
+    window.toggleMute = toggleMute;
+
+    function showPanel(panelId) {
+      document.getElementById('login-panel').classList.add('hidden');
+      document.getElementById('menu-panel').classList.add('hidden');
+      document.getElementById('game-panel').classList.add('hidden');
+      document.getElementById('result-panel').classList.add('hidden');
+      document.getElementById(panelId).classList.remove('hidden');
+    }
+    window.showPanel = showPanel;
+
+    function switchTab(tabName) {
+      playSound('click');
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-indigo-600', 'text-indigo-600');
+        btn.classList.add('border-transparent', 'text-slate-500');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+      });
+
+      document.getElementById(`tab-${tabName}`).classList.add('border-indigo-600', 'text-indigo-600');
+      document.getElementById(`tab-${tabName}`).classList.remove('border-transparent', 'text-slate-500');
+      document.getElementById(`panel-${tabName}`).classList.remove('hidden');
+
+      if (tabName === 'weakness') {
+        renderWeaknessHeatmap();
+      } else if (tabName === 'leaderboard') {
+        loadLeaderboard(currentLeaderboardSort);
+      } else if (tabName === 'history') {
+        loadHistory();
+      }
+    }
+    window.switchTab = switchTab;
+
+    function isConfiguredGasUrl(url = DEFAULT_GAS_URL) {
+      return !!url && /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(String(url).trim());
+    }
+    window.isConfiguredGasUrl = isConfiguredGasUrl;
+
+    function getGasUrl() {
+      const manualUrl = window.appState?.adminSettings?.gasUrl;
+      if (manualUrl && manualUrl.trim()) return manualUrl.trim();
+      return (DEFAULT_GAS_URL || '').trim();
+    }
+    window.getGasUrl = getGasUrl;
+
+    function getLoginSyncMode() {
+      const sel = document.getElementById('login-sync-mode');
+      return sel ? sel.value : (localStorage.getItem('9x9_login_sync_mode') || 'auto');
+    }
+    window.getLoginSyncMode = getLoginSyncMode;
+
+    function setLoginSyncStatus(message, tone = 'slate') {
+      const hint = document.getElementById('login-sync-hint');
+      if (!hint) return;
+      hint.textContent = message;
+      hint.className = `text-[10px] mt-1 leading-relaxed ${tone === 'red' ? 'text-rose-500' : tone === 'green' ? 'text-emerald-600' : tone === 'blue' ? 'text-sky-600' : 'text-slate-400'}`;
+    }
+    window.setLoginSyncStatus = setLoginSyncStatus;
+
+    function initLoginSyncModeUI() {
+      const sel = document.getElementById('login-sync-mode');
+      if (!sel) return;
+      const saved = localStorage.getItem('9x9_login_sync_mode') || 'auto';
+      sel.value = saved;
+      sel.onchange = () => {
+        localStorage.setItem('9x9_login_sync_mode', sel.value);
+        if (sel.value === 'local') setLoginSyncStatus('目前使用本機模式：可練習，但資料只存在這台裝置。', 'blue');
+        else if (!isConfiguredGasUrl(getGasUrl())) setLoginSyncStatus('尚未在程式內設定 GAS URL；會自動使用本機模式。', 'red');
+        else setLoginSyncStatus('目前會優先使用雲端帳號驗證與試算表紀錄。', 'green');
+      };
+      sel.onchange();
+    }
+    window.initLoginSyncModeUI = initLoginSyncModeUI;
+
+    function jsonpRequest(url, params = {}, timeoutMs = 8000) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `jsonp_9x9_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+        const script = document.createElement('script');
+        const cleanup = () => {
+          try { delete window[callbackName]; } catch(e) { window[callbackName] = undefined; }
+          if (script.parentNode) script.parentNode.removeChild(script);
+          clearTimeout(timer);
+        };
+        const query = new URLSearchParams({ ...params, callback: callbackName });
+        window[callbackName] = (data) => { cleanup(); resolve(data); };
+        script.onerror = () => { cleanup(); reject(new Error('GAS 連線失敗')); };
+        const timer = setTimeout(() => { cleanup(); reject(new Error('GAS 回應逾時')); }, timeoutMs);
+        script.src = `${url}${url.includes('?') ? '&' : '?'}${query.toString()}`;
+        document.head.appendChild(script);
+      });
+    }
+    window.jsonpRequest = jsonpRequest;
+
+    async function gasAuthenticateProfile(nickname, pairingCode) {
+      const gasUrl = getGasUrl();
+      if (!isConfiguredGasUrl(gasUrl)) throw new Error('尚未設定 GAS URL');
+      return await jsonpRequest(gasUrl, {
+        action: 'authProfile',
+        token: GAS_SYNC_TOKEN,
+        nickname,
+        pairingCode,
+        ip: window.appState.userIP || '0.0.0.0',
+        userId: window.appState.userId || 'github_pages_user',
+        appVersion: 'github-gas-4.0'
+      });
+    }
+    window.gasAuthenticateProfile = gasAuthenticateProfile;
+
+    async function sha256Hex(text) {
+      const data = new TextEncoder().encode(text);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    window.sha256Hex = sha256Hex;
+
+    function openAdminModal() {
+      playSound('click');
+      document.getElementById('admin-modal').classList.remove('hidden');
+      if (isAdminLoggedIn) {
+        showAdminDashboard();
+      } else {
+        document.getElementById('admin-login-box').classList.remove('hidden');
+        document.getElementById('admin-dashboard-box').classList.add('hidden');
+      }
+    }
+    window.openAdminModal = openAdminModal;
+
+    function closeAdminModal() {
+      document.getElementById('admin-modal').classList.add('hidden');
+    }
+    window.closeAdminModal = closeAdminModal;
+
+    async function verifyAdminLogin() {
+      const user = document.getElementById('admin-user-input').value.trim();
+      const pass = document.getElementById('admin-pass-input').value.trim();
+      const now = Date.now();
+      const lockUntil = Number(localStorage.getItem(ADMIN_LOCK_STORAGE_KEY) || 0);
+
+      if (lockUntil && now < lockUntil) {
+        const remainMinutes = Math.ceil((lockUntil - now) / 60000);
+        playSound('wrong');
+        alertModal("後台暫時鎖定", `密碼錯誤次數過多。請約 ${remainMinutes} 分鐘後再試。`);
+        return;
+      }
+
+      if (!pass || pass.length < 8) {
+        playSound('wrong');
+        alertModal("通行碼太短", "請輸入至少 8 碼的後台通行碼。GitHub 公開版不再使用內建固定密碼。建議使用英數混合。 ");
+        return;
+      }
+
+      const savedHash = localStorage.getItem(ADMIN_HASH_STORAGE_KEY);
+      const candidateHash = await sha256Hex(pass);
+
+      if (!savedHash) {
+        const ok = confirm(`此裝置尚未設定後台通行碼。
+
+是否將目前輸入的通行碼設定為此裝置的後台通行碼？
+
+提醒：GitHub Pages 是公開靜態網頁，這個通行碼只保護此瀏覽器中的後台畫面，不是伺服器級權限。請勿在學生共用裝置上設定管理者通行碼。`);
+        if (!ok) return;
+        localStorage.setItem(ADMIN_HASH_STORAGE_KEY, candidateHash);
+        localStorage.setItem('9x9_admin_name_hint', user || 'local-admin');
+        localStorage.removeItem(ADMIN_ATTEMPT_STORAGE_KEY);
+        localStorage.removeItem(ADMIN_LOCK_STORAGE_KEY);
+        isAdminLoggedIn = true;
+        playSound('correct');
+        showAdminDashboard();
+        return;
+      }
+
+      if (candidateHash === savedHash) {
+        localStorage.removeItem(ADMIN_ATTEMPT_STORAGE_KEY);
+        localStorage.removeItem(ADMIN_LOCK_STORAGE_KEY);
+        isAdminLoggedIn = true;
+        playSound('correct');
+        showAdminDashboard();
+      } else {
+        const failed = Number(localStorage.getItem(ADMIN_ATTEMPT_STORAGE_KEY) || 0) + 1;
+        localStorage.setItem(ADMIN_ATTEMPT_STORAGE_KEY, String(failed));
+        if (failed >= ADMIN_MAX_FAILED_ATTEMPTS) {
+          localStorage.setItem(ADMIN_LOCK_STORAGE_KEY, String(now + ADMIN_LOCK_MINUTES * 60 * 1000));
+          localStorage.setItem(ADMIN_ATTEMPT_STORAGE_KEY, '0');
+          playSound('wrong');
+          alertModal("後台已鎖定", `密碼錯誤已達 ${ADMIN_MAX_FAILED_ATTEMPTS} 次，後台將暫時鎖定 ${ADMIN_LOCK_MINUTES} 分鐘。`);
+          return;
+        }
+        playSound('wrong');
+        alertModal("驗證失敗！", `後台通行碼錯誤。剩餘 ${ADMIN_MAX_FAILED_ATTEMPTS - failed} 次嘗試後會暫時鎖定。若忘記通行碼，請清除本網站 localStorage 後重新設定。`);
+      }
+    }
+    window.verifyAdminLogin = verifyAdminLogin;
+
+    async function showAdminDashboard() {
+      document.getElementById('admin-login-box').classList.add('hidden');
+      document.getElementById('admin-dashboard-box').classList.remove('hidden');
+
+      document.getElementById('admin-toggle-super').checked = !window.appState.adminSettings.hideSuperMode;
+      document.getElementById('admin-toggle-daily').checked = window.appState.adminSettings.forceDailyChallenge;
+      document.getElementById('admin-daily-count').value = window.appState.adminSettings.dailyChallengeCount;
+      document.getElementById('admin-gas-url').value = window.appState.adminSettings.gasUrl || DEFAULT_GAS_URL || "";
+
+      renderAdminBlacklistUI();
+      await loadAdminScoresTable();
+    }
+    window.showAdminDashboard = showAdminDashboard;
+
+    function switchAdminTab(tabId) {
+      playSound('click');
+      document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+        btn.className = "admin-nav-btn px-4 py-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-800 font-sans";
+      });
+      document.querySelectorAll('.admin-tab-panel').forEach(panel => {
+        panel.classList.add('hidden');
+      });
+
+      document.getElementById(`admin-tab-${tabId}`).className = "admin-nav-btn px-4 py-2 border-b-2 border-indigo-600 text-indigo-600 font-bold font-sans";
+      document.getElementById(`admin-panel-${tabId}`).classList.remove('hidden');
+
+      if (tabId === 'users') {
+        renderAdminUsersList();
+      } else if (tabId === 'scores') {
+        loadAdminScoresTable();
+      }
+    }
+    window.switchAdminTab = switchAdminTab;
+
+    function renderAdminBlacklistUI() {
+      const itemsContainer = document.getElementById('admin-blacklist-items');
+      const list = window.appState.adminSettings.deletedUsers || [];
+
+      if (list.length === 0) {
+        itemsContainer.innerHTML = '<p class="text-[10px] text-slate-400 py-2 font-sans">目前沒有任何禁用的黑名單暱稱。</p>';
+        return;
+      }
+
+      itemsContainer.innerHTML = '';
+      list.forEach(name => {
+        const item = document.createElement('div');
+        item.className = "flex justify-between items-center bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-xl text-xs text-rose-700 font-bold font-sans";
+        item.innerHTML = `
+          <span><i class="fa-solid fa-user-slash mr-1"></i> ${escapeHtml(name)}</span>
+          <button onclick="removeNicknameFromBlacklist('${escapeHtml(name)}')" class="text-[10px] bg-rose-600 hover:bg-rose-700 text-white font-bold px-2 py-0.5 rounded-full transition font-sans">解除</button>
+        `;
+        itemsContainer.appendChild(item);
+      });
+    }
+    window.renderAdminBlacklistUI = renderAdminBlacklistUI;
+
+    async function addNicknameToBlacklist() {
+      const input = document.getElementById('blacklist-add-input');
+      const name = input.value.trim();
+
+      if (!name) {
+        alertModal("請輸入暱稱", "請先輸入一個你想禁用的學生暱稱。");
+        return;
+      }
+
+      if (!window.appState.adminSettings.deletedUsers) {
+        window.appState.adminSettings.deletedUsers = [];
+      }
+
+      if (window.appState.adminSettings.deletedUsers.includes(name)) {
+        alertModal("暱稱已存在", "此暱稱已經在禁用黑名單中了。");
+        return;
+      }
+
+      window.appState.adminSettings.deletedUsers.push(name);
+      await updateAdminSettings();
+      
+      playSound('correct');
+      input.value = '';
+      renderAdminBlacklistUI();
+    }
+    window.addNicknameToBlacklist = addNicknameToBlacklist;
+
+    async function removeNicknameFromBlacklist(name) {
+      playSound('click');
+      if (!window.appState.adminSettings.deletedUsers) return;
+
+      window.appState.adminSettings.deletedUsers = window.appState.adminSettings.deletedUsers.filter(n => n !== name);
+      await updateAdminSettings();
+      renderAdminBlacklistUI();
+    }
+    window.removeNicknameFromBlacklist = removeNicknameFromBlacklist;
+
+    async function renderAdminUsersList() {
+      const container = document.getElementById('admin-users-list');
+      container.innerHTML = '<div class="text-center py-6 text-slate-400 font-sans">載入雲端練習生數據中...</div>';
+
+      if (useLocalStorageFallback) {
+        const localUsers = getLocalProfilesWithMeta().filter(u => !checkUserDeletedStatus(u.nickname));
+        let history = [];
+        try { history = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (e) { history = []; }
+        if (localUsers.length === 0) {
+          container.innerHTML = '<div class="text-center py-6 text-slate-400 font-sans">目前尚無本機練習生。</div>';
+          return;
+        }
+        container.innerHTML = '';
+        localUsers.forEach(u => {
+          const count = history.filter(item => item.nickname === u.nickname).length;
+          const row = document.createElement('div');
+          row.className = "bg-white p-3 rounded-xl border border-slate-100 flex items-center justify-between shadow-sm gap-2 font-sans";
+          row.innerHTML = `
+            <div class="min-w-0 flex-1">
+              <div class="font-bold text-slate-800 text-sm truncate flex items-center gap-1.5 font-sans">
+                <i class="fa-solid fa-graduation-cap text-indigo-500 shrink-0"></i>
+                <span class="truncate">${escapeHtml(u.nickname)}</span>
+                <span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">配對碼: ${escapeHtml(u.pairingCode)}</span>
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                本機模式 | 紀錄：${count} 次 | IP: ${escapeHtml(u.ip || 'Localhost')}
+              </div>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+        return;
+      }
+
+      try {
+        const profilesColRef = collection(db, 'artifacts', appId, 'public', 'data', 'profiles');
+        const profilesSnapshot = await getDocs(profilesColRef);
+        
+        let userMap = {};
+        profilesSnapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const docId = docSnap.id; 
+          
+          userMap[docId] = {
+            docId: docId,
+            userId: data.userId || 'Localhost',
+            nickname: data.nickname || docId,
+            pairingCode: data.pairingCode || '-----', 
+            ip: data.ip || '0.0.0.0',
+            count: 0,
+            scoreIds: []
+          };
+        });
+
+        const scoresColRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+        const querySnapshot = await getDocs(scoresColRef);
+        
+        querySnapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.nickname) {
+            const safeNick = data.nickname.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+            const docId = safeNick; 
+            
+            if (!userMap[docId]) {
+              userMap[docId] = {
+                docId: docId,
+                userId: data.userId || 'Localhost',
+                nickname: data.nickname,
+                pairingCode: '-----',
+                ip: data.ip || '0.0.0.0',
+                count: 0,
+                scoreIds: []
+              };
+            }
+            userMap[docId].count++;
+            userMap[docId].scoreIds.push(docSnap.id);
+          }
+        });
+
+        const users = Object.values(userMap);
+        if (users.length === 0) {
+          container.innerHTML = '<div class="text-center py-12 text-slate-400 font-sans">目前尚無任何雲端練習生。</div>';
+          return;
+        }
+
+        container.innerHTML = '';
+        users.forEach(u => {
+          const row = document.createElement('div');
+          row.className = "bg-white p-3 rounded-xl border border-slate-100 flex items-center justify-between shadow-sm gap-2 font-sans";
+          row.innerHTML = `
+            <div class="min-w-0 flex-1">
+              <div class="font-bold text-slate-800 text-sm truncate flex items-center gap-1.5 font-sans">
+                <i class="fa-solid fa-graduation-cap text-indigo-500 shrink-0"></i> 
+                <span class="truncate">${escapeHtml(u.nickname)}</span>
+                <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">配對碼: ${u.pairingCode}</span>
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                IP: ${u.ip} | 雲端紀錄：${u.count} 次 | ID: ${u.userId.substring(0, 6)}...
+              </div>
+            </div>
+            <div class="flex gap-1.5 text-xs shrink-0 font-sans">
+              <button onclick="queryAdminUserDetail('${u.userId}', '${escapeHtml(u.nickname)}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition font-sans">
+                <i class="fa-solid fa-magnifying-glass"></i> 詳情
+              </button>
+              <button onclick="deleteAdminUser('${u.userId}', '${escapeHtml(u.nickname)}', ${JSON.stringify(u.scoreIds).replace(/"/g, "&quot;")})" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition font-sans">
+                <i class="fa-solid fa-user-slash"></i> 刪除
+              </button>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error("renderAdminUsersList Error:", err);
+        container.innerHTML = '<div class="text-center py-6 text-rose-500 font-sans">雲端讀取失敗。</div>';
+      }
+    }
+    window.renderAdminUsersList = renderAdminUsersList;
+
+    async function queryAdminUserDetail(userId, nickname) {
+      playSound('click');
+      const container = document.getElementById('admin-user-detail-container');
+      container.innerHTML = '<div class="text-center py-12 text-slate-400 font-sans"><i class="fa-solid fa-spinner animate-spin text-xl block mb-2 font-sans"></i> 智慧下載該練習生資料中...</div>';
+
+      try {
+        const safeNick = nickname.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+        const profileDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', safeNick);
+        const docSnap = await getDoc(profileDocRef);
+
+        let logs = [];
+        let pCode = '-----';
+        if (docSnap.exists()) {
+          const pData = docSnap.data();
+          logs = pData.questionLogs || [];
+          pCode = pData.pairingCode || '-----';
+        }
+
+        let weaknesses = {};
+        let questionTimes = {};
+        logs.forEach(log => {
+          if (!log.correct) {
+            weaknesses[log.q] = (weaknesses[log.q] || 0) + 1;
+          }
+          if (!questionTimes[log.q]) {
+            questionTimes[log.q] = { totalTime: 0, count: 0 };
+          }
+          questionTimes[log.q].totalTime += log.time;
+          questionTimes[log.q].count++;
+        });
+
+        let digitStats = {};
+        [2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19].forEach(d => {
+          digitStats[d] = { errors: 0, totalTime: 0, count: 0 };
+        });
+
+        Object.entries(weaknesses).forEach(([qKey, errs]) => {
+          const [a, b] = qKey.split('x').map(Number);
+          if (digitStats[a]) digitStats[a].errors += errs;
+          // 防止 7x7 錯誤被算兩次
+          if (digitStats[b] && a !== b) digitStats[b].errors += errs;
+        });
+        Object.entries(questionTimes).forEach(([qKey, tData]) => {
+          const [a, b] = qKey.split('x').map(Number);
+          if (digitStats[a]) {
+            digitStats[a].totalTime += tData.totalTime;
+            digitStats[a].count += tData.count;
+          }
+          // 防止 7x7 卡頓時間被算兩次
+          if (digitStats[b] && a !== b) {
+            digitStats[b].totalTime += tData.totalTime;
+            digitStats[b].count += tData.count;
+          }
+        });
+
+        const sortedDigits = Object.entries(digitStats)
+          .filter(([_, stats]) => stats.errors > 0)
+          .sort((a, b) => b[1].errors - a[1].errors);
+
+        let weaknessHtml = '';
+        if (sortedDigits.length > 0) {
+          weaknessHtml = sortedDigits.slice(0, 3).map(([d, stats]) => `
+            <div class="bg-rose-50 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold flex justify-between font-sans">
+              <span>【${d} 的乘法】不熟練</span>
+              <span class="font-mono">累計答錯 ${stats.errors} 次</span>
+            </div>
+          `).join('');
+        } else {
+          weaknessHtml = '<p class="text-xs text-slate-400 font-sans">目前表現優異，尚無顯著弱點！</p>';
+        }
+
+        container.innerHTML = `
+          <div class="space-y-4 font-sans">
+            <div class="border-b pb-3 font-sans">
+              <h5 class="font-extrabold text-indigo-950 text-base flex items-center gap-1.5 font-sans">
+                <i class="fa-solid fa-address-card text-indigo-600 font-sans"></i> ${escapeHtml(nickname)} 學習檔案
+              </h5>
+              <div class="flex items-center justify-between bg-emerald-50 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold font-mono mt-2 border border-emerald-100">
+                <span class="font-sans">🔑 學生專屬智慧配對碼：</span>
+                <span class="text-sm font-extrabold tracking-widest">${pCode}</span>
+              </div>
+            </div>
+
+            <div class="space-y-2 font-sans">
+              <span class="block text-xs font-bold text-slate-500 font-sans">🎯 智慧弱點數字診斷：</span>
+              ${weaknessHtml}
+            </div>
+
+            <div class="bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/40 text-xs font-sans">
+              <span class="block font-bold text-slate-700 mb-1.5 font-sans">⏱️ 答題時間分析 (近幾次答題)：</span>
+              <div class="space-y-1 font-mono text-slate-600 text-[10px]">
+                <p>歷程日誌總筆數: ${logs.length} 筆</p>
+                <p>正確答題次數: ${logs.filter(l => l.correct).length} 筆</p>
+                <p>平均答題秒數: ${logs.length > 0 ? (logs.reduce((sum, l) => sum + l.time, 0) / logs.length).toFixed(2) + '秒' : '無紀錄'}</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-100 p-2.5 rounded-xl text-[10px] text-slate-500 leading-relaxed font-sans font-sans">
+              💡 <strong>教師建議：</strong>該生若配對碼遺失，您可以在此處查閱並協助學生。若想將其封鎖或清除，請點選列表中的「刪除」按鈕。
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        console.error("queryAdminUserDetail Error:", err);
+        container.innerHTML = '<div class="text-center py-12 text-rose-500 font-sans">查詢失敗，請確認該練習生是否存在歷程日誌。</div>';
+      }
+    }
+    window.queryAdminUserDetail = queryAdminUserDetail;
+
+    function deleteAdminUser(userId, nickname, scoreIds) {
+      playSound('click');
+      confirmModal(
+        `確定要刪除練習生【${nickname}】嗎？`,
+        "這將同時清除他在雲端的所有歷史分數、排行榜紀錄！並將此角色「暱稱」列入全域禁用黑名單，強制該生在所有設備上被秒退登出格式化！",
+        async () => {
+          try {
+            const safeNick = nickname.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+            const profileDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', safeNick);
+            await deleteDoc(profileDocRef);
+
+            if (scoreIds && scoreIds.length > 0) {
+              for (const scoreId of scoreIds) {
+                const publicScoreRef = doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId);
+                await deleteDoc(publicScoreRef);
+              }
+            }
+
+            if (!window.appState.adminSettings.deletedUsers) {
+              window.appState.adminSettings.deletedUsers = [];
+            }
+            if (!window.appState.adminSettings.deletedUsers.includes(nickname)) {
+              window.appState.adminSettings.deletedUsers.push(nickname);
+            }
+            await updateAdminSettings();
+
+            playSound('correct');
+            alertModal("刪除與禁用完成", `已成功將練習生 ${nickname} 永久刪除並寫入全域禁用名單！`);
+            renderAdminUsersList();
+            document.getElementById('admin-user-detail-container').innerHTML = `
+              <div class="text-center py-12 text-slate-400 text-xs font-sans">
+                <i class="fa-solid fa-magnifying-glass text-2xl mb-2 block"></i>
+                請點選左側練習生的「查看詳情」來檢索其完整答題資料
+              </div>
+            `;
+          } catch (e) {
+            console.error("刪除練習生失敗:", e);
+            alertModal("刪除失敗", "清除資料時出錯，請確認網路存取權限。");
+          }
+        }
+      );
+    }
+    window.deleteAdminUser = deleteAdminUser;
+
+    function deleteAdminScoreRecord(scoreId, nickname, mode, accuracy, score) {
+      playSound('click');
+      confirmModal(
+        `確定要刪除此筆作答紀錄嗎？`,
+        `作答者: ${nickname} | 正確率: ${accuracy}% | 加權分數: ${score}。刪除後該筆紀錄將永久自排行榜移除！`,
+        async () => {
+          try {
+            const publicScoreRef = doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId);
+            await deleteDoc(publicScoreRef);
+
+            playSound('correct');
+            alertModal("刪除成功", "已成功將該筆作答成績自雲端排行榜完全清除！");
+            loadAdminScoresTable();
+          } catch (err) {
+            console.error("刪除單筆紀錄失敗:", err);
+            alertModal("刪除失敗", "清除該筆成績時出錯，請檢查雲端連接。");
+          }
+        }
+      );
+    }
+    window.deleteAdminScoreRecord = deleteAdminScoreRecord;
+
+    async function updateAdminSettings() {
+      window.appState.adminSettings = {
+        hideSuperMode: !document.getElementById('admin-toggle-super').checked,
+        forceDailyChallenge: document.getElementById('admin-toggle-daily').checked,
+        dailyChallengeCount: parseInt(document.getElementById('admin-daily-count').value) || 25,
+        gasUrl: document.getElementById('admin-gas-url').value.trim(),
+        deletedUsers: window.appState.adminSettings.deletedUsers || [] 
+      };
+
+      localStorage.setItem('9x9_offline_admin_settings', JSON.stringify(window.appState.adminSettings));
+
+      if (!useLocalStorageFallback) {
+        try {
+          const adminDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
+          await setDoc(adminDocRef, window.appState.adminSettings);
+        } catch (e) {
+          console.error("更新雲端管理控管失敗", e);
+        }
+      }
+
+      applyAdminSettingsToUI();
+      checkDailyChallengeCompletion();
+    }
+    window.updateAdminSettings = updateAdminSettings;
+
+    function saveGasUrl() {
+      updateAdminSettings();
+    }
+    window.saveGasUrl = saveGasUrl;
+
+    async function syncToGoogleSheets() {
+      playSound('click');
+      const gasUrl = getGasUrl();
+      if (!isConfiguredGasUrl(gasUrl)) {
+        alertModal("尚未設定 GAS URL", "請先將 Apps Script Web App URL 寫入程式中的 DEFAULT_GAS_URL，或在後台填入 GAS URL。未設定時仍可本機練習，但不能同步到試算表。");
+        return;
+      }
+
+      let scores = [];
+      let profiles = [];
+
+      if (useLocalStorageFallback) {
+        profiles = getLocalProfilesWithMeta();
+        const localHistory = localStorage.getItem('9x9_offline_history');
+        if (localHistory) {
+          try {
+            const historyList = JSON.parse(localHistory);
+            scores = historyList.map(item => ({
+              recordId: item.recordId || `${getSafeNickname(item.nickname || localStorage.getItem('9x9_active_profile') || 'local')}_${item.timestamp || Date.now()}`,
+              userId: item.userId || 'offline_user',
+              nickname: item.nickname || localStorage.getItem('9x9_active_profile') || '本機練習生',
+              mode: item.mode,
+              questionsCount: item.questionsCount,
+              accuracy: item.accuracy,
+              duration: item.duration,
+              formattedTime: item.formattedTime,
+              correctCount: item.correctCount,
+              weightedScore: item.weightedScore,
+              timestamp: item.timestamp,
+              ip: item.ip || 'Localhost'
+            }));
+          } catch(e) {
+            console.error("解析本機歷史紀錄失敗:", e);
+          }
+        }
+      } else {
+        try {
+          const profilesColRef = collection(db, 'artifacts', appId, 'public', 'data', 'profiles');
+          const profilesSnapshot = await getDocs(profilesColRef);
+          profilesSnapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            profiles.push({
+              nickname: data.nickname || docSnap.id,
+              pairingCode: data.pairingCode || '-----',
+              ip: data.ip || '0.0.0.0',
+              userId: data.userId || '',
+              createdAt: data.createdAt || '',
+              updatedAt: data.updatedAt || ''
+            });
+          });
+
+          const scoresColRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+          const querySnapshot = await getDocs(scoresColRef);
+          querySnapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            scores.push({ recordId: data.recordId || docSnap.id, ...data });
+          });
+        } catch (err) {
+          console.error("讀取雲端 Firestore 數據失敗，將自動降級採用本機數據上傳", err);
+        }
+      }
+
+      if (scores.length === 0 && profiles.length === 0) {
+        alertModal("同步失敗", "目前本機或雲端沒有任何練習生帳號或挑戰紀錄可供上傳同步。");
+        return;
+      }
+
+      try {
+        await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors', 
+          headers: {
+            'Content-Type': 'text/plain' 
+          },
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, scores: scores, profiles: profiles, appVersion: 'github-gas-4.0' })
+        });
+
+        playSound('correct');
+        alertModal("同步指令已送出", `已送出 ${profiles.length} 筆練習生帳號與 ${scores.length} 筆作答紀錄到 Google Apps Script。\n\n(備註：因為 no-cors 模式的安全規範，網頁成功發送後無法讀取 Google 的回傳狀態。若試算表內沒看到資料，請確認您的 Apps Script 部署設定中「誰可以存取」是否已設為「任何人」，且 Apps Script 已支援 profiles 與 scores 兩種資料。)`);
+      } catch (err) {
+        console.error("GAS 雲端同步失敗", err);
+        alertModal("同步錯誤", "同步連線失敗，請檢查您的 Google Apps Script API 網址是否正確。");
+      }
+    }
+    window.syncToGoogleSheets = syncToGoogleSheets;
+
+    async function exportScoresToCSV() {
+      playSound('click');
+      if (useLocalStorageFallback) return;
+      try {
+        const scoresColRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+        const querySnapshot = await getDocs(scoresColRef);
+        let csvContent = "\ufeff日期,暱稱,模式,題數,正確率,耗時,加權評分,IP地址,用戶ID\n";
+        
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          const date = new Date(data.timestamp).toLocaleString();
+          const modeStr = data.mode === 'super' ? "超級挑戰" : "基礎挑戰";
+          csvContent += `"${date}","${data.nickname}","${modeStr}",${data.questionsCount},"${data.accuracy}%",${data.duration},${data.weightedScore},"${data.ip}","${data.userId}"\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `9x9_乘法練習器_班級總成績_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        alertModal("匯出失敗", "無法從雲端取得成績數據，請檢查網路。");
+      }
+    }
+    window.exportScoresToCSV = exportScoresToCSV;
+
+    async function loadAdminScoresTable() {
+      const tbody = document.getElementById('admin-table-tbody');
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">實時同步雲端數據中...</td></tr>';
+      
+      if (useLocalStorageFallback) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">目前處於本機離線模式，無法讀取雲端大資料庫。</td></tr>';
+        return;
+      }
+
+      try {
+        const scoresColRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+        const querySnapshot = await getDocs(scoresColRef);
+        
+        let list = [];
+        querySnapshot.forEach(doc => {
+          const d = doc.data();
+          list.push({
+            id: doc.id,
+            ...d
+          });
+        });
+
+        list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400 font-sans">目前尚無學生成績。</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        list.forEach(item => {
+          const row = document.createElement('tr');
+          const date = new Date(item.timestamp).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+          row.className = 'hover:bg-slate-50 transition border-b';
+          
+          let modeBadge = '<span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">基礎</span>';
+          if (item.mode === 'super') {
+            modeBadge = '<span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans font-sans">⚡ 超級</span>';
+          } else if (item.mode === 'daily') {
+            modeBadge = '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full font-sans">✨ 每日</span>';
+          }
+
+          row.innerHTML = `
+            <td class="py-2 px-3">${date}</td>
+            <td class="py-2 px-3 font-bold font-sans">${escapeHtml(item.nickname)}</td>
+            <td class="py-2 px-3 text-center">${modeBadge}</td>
+            <td class="py-2 px-3 text-center">${item.questionsCount} 題</td>
+            <td class="py-2 px-3 text-center font-bold text-indigo-600 font-mono">${item.accuracy}%</td>
+            <td class="py-2 px-3 text-center">${item.duration.toFixed(2)} 秒</td>
+            <td class="py-2 px-3 text-center font-bold text-emerald-600">${item.weightedScore}</td>
+            <td class="py-2 px-3 font-mono">${item.ip || '0.0.0.0'}</td>
+            <td class="py-2 px-3 text-right">
+              <button onclick="deleteAdminScoreRecord('${item.id}', '${item.nickname}', '${item.mode}', ${item.accuracy}, ${item.weightedScore})" class="bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 w-8 h-8 rounded-lg transition inline-flex items-center justify-center font-sans" title="刪除此筆紀錄">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-rose-500 font-sans">無法同步雲端數據。</td></tr>';
+      }
+    }
+    window.loadAdminScoresTable = loadAdminScoresTable;
+
+    function switchTimeFilter(filter) {
+      playSound('click');
+      window.appState.weaknessTimeFilter = filter;
+      
+      document.querySelectorAll('.time-filter-btn').forEach(btn => {
+        btn.className = "time-filter-btn px-2.5 py-1 rounded text-slate-600 font-medium hover:bg-slate-300 transition font-sans";
+      });
+      const activeBtn = document.getElementById(`time-filter-${filter}`);
+      activeBtn.className = "time-filter-btn bg-white text-indigo-600 shadow-sm font-bold px-2.5 py-1 rounded font-sans";
+
+      recalculateWeaknessFromLogs();
+      renderWeaknessHeatmap();
+    }
+    window.switchTimeFilter = switchTimeFilter;
+
+    function recalculateWeaknessFromLogs() {
+      const logs = window.appState.questionLogs || [];
+      const filter = window.appState.weaknessTimeFilter;
+
+      window.appState.weaknesses = {};
+      window.appState.questionTimes = {};
+
+      const now = Date.now();
+      let cutoff = 0;
+      if (filter === 'today') {
+        const todayStart = new Date();
+        todayStart.setHours(0,0,0,0);
+        cutoff = todayStart.getTime();
+      } else if (filter === '5days') {
+        cutoff = now - (5 * 24 * 3600 * 1000);
+      } else if (filter === '15days') {
+        cutoff = now - (15 * 24 * 3600 * 1000);
+      }
+
+      const filteredLogs = logs.filter(log => {
+        const logTime = new Date(log.timestamp).getTime();
+        return logTime >= cutoff;
+      });
+
+      filteredLogs.forEach(log => {
+        const qKey = log.q;
+        if (!log.correct) {
+          window.appState.weaknesses[qKey] = (window.appState.weaknesses[qKey] || 0) + 1;
+        }
+
+        if (!window.appState.questionTimes[qKey]) {
+          window.appState.questionTimes[qKey] = { totalTime: 0, count: 0, avgTime: 0 };
+        }
+        window.appState.questionTimes[qKey].totalTime += log.time;
+        window.appState.questionTimes[qKey].count += 1;
+        window.appState.questionTimes[qKey].avgTime = parseFloat((window.appState.questionTimes[qKey].totalTime / window.appState.questionTimes[qKey].count).toFixed(2));
+      });
+    }
+    window.recalculateWeaknessFromLogs = recalculateWeaknessFromLogs;
+
+    function setSequentialRange(type) {
+      playSound('click');
+      window.appState.seqRangeType = type;
+      
+      document.querySelectorAll('.seq-opt-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'border-emerald-500');
+        btn.classList.add('bg-slate-100', 'hover:bg-slate-200', 'text-slate-700', 'border-slate-200');
+      });
+      
+      if (type === 'all') {
+        document.getElementById('seq-btn-all').classList.remove('bg-slate-100', 'hover:bg-slate-200', 'text-slate-700', 'border-slate-200');
+        document.getElementById('seq-btn-all').classList.add('bg-emerald-600', 'text-white', 'border-emerald-500');
+        document.getElementById('seq-digit-select').value = "";
+        document.getElementById('seq-count-label').textContent = "64";
+      } else if (type === 'smart') {
+        document.getElementById('seq-btn-smart').classList.remove('bg-slate-100', 'hover:bg-slate-200', 'text-slate-700', 'border-slate-200');
+        document.getElementById('seq-btn-smart').classList.add('bg-emerald-600', 'text-white', 'border-emerald-500');
+        document.getElementById('seq-digit-select').value = "";
+        
+        const bankCount = getWeaknessBankQuestions(10).length;
+        document.getElementById('seq-count-label').textContent = String(bankCount);
+      } else if (type === 'digit') {
+        const val = document.getElementById('seq-digit-select').value;
+        if (val) {
+          window.appState.seqSelectedDigit = val;
+          document.getElementById('seq-count-label').textContent = "15";
+        }
+      }
+    }
+    window.setSequentialRange = setSequentialRange;
+
+    function setChallengeQuestions(num) {
+      playSound('click');
+      window.appState.challengeQuestionsCount = num;
+      document.querySelectorAll('.q-limit-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'border-indigo-400');
+        btn.classList.add('bg-white/20', 'border-white/10');
+      });
+      const targetId = num === 64 ? 'all' : num;
+      document.getElementById(`q-btn-${targetId}`).classList.remove('bg-white/20', 'border-white/10');
+      document.getElementById(`q-btn-${targetId}`).classList.add('bg-indigo-600', 'border-indigo-400');
+    }
+    window.setChallengeQuestions = setChallengeQuestions;
+
+    function generatePairingCode() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; 
+      let code = "";
+      for (let i = 0; i < 5; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    }
+    window.generatePairingCode = generatePairingCode;
+
+    function fillRandomPairingCode() {
+      const code = generatePairingCode();
+      document.getElementById('nickname-code-input').value = code;
+      playSound('click');
+    }
+    window.fillRandomPairingCode = fillRandomPairingCode;
+
+    function getLocalProfileRegistry() {
+      try {
+        const registry = JSON.parse(localStorage.getItem('9x9_local_profile_registry') || '{}');
+        return registry && typeof registry === 'object' ? registry : {};
+      } catch (e) {
+        return {};
+      }
+    }
+    window.getLocalProfileRegistry = getLocalProfileRegistry;
+
+    function saveLocalProfileRegistry(registry) {
+      localStorage.setItem('9x9_local_profile_registry', JSON.stringify(registry || {}));
+    }
+    window.saveLocalProfileRegistry = saveLocalProfileRegistry;
+
+    function upsertLocalProfileMeta(nickname, pairingCode = null, extra = {}) {
+      if (!nickname) return;
+      const registry = getLocalProfileRegistry();
+      const current = registry[nickname] || {};
+      registry[nickname] = {
+        nickname,
+        pairingCode: pairingCode || current.pairingCode || '-----',
+        createdAt: current.createdAt || extra.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ip: extra.ip || current.ip || window.appState.userIP || 'Localhost',
+        userId: extra.userId || current.userId || window.appState.userId || 'offline_user'
+      };
+      saveLocalProfileRegistry(registry);
+
+      let localProfiles = [];
+      try { localProfiles = JSON.parse(localStorage.getItem('9x9_local_profiles') || '[]'); } catch (e) { localProfiles = []; }
+      localProfiles = Array.from(new Set([nickname, ...localProfiles]));
+      localStorage.setItem('9x9_local_profiles', JSON.stringify(localProfiles));
+    }
+    window.upsertLocalProfileMeta = upsertLocalProfileMeta;
+
+    function getLocalProfilesWithMeta() {
+      const registry = getLocalProfileRegistry();
+      let names = [];
+      try { names = JSON.parse(localStorage.getItem('9x9_local_profiles') || '[]'); } catch (e) { names = []; }
+      return Array.from(new Set([...names, ...Object.keys(registry)])).map(name => ({
+        nickname: name,
+        pairingCode: registry[name]?.pairingCode || '-----',
+        createdAt: registry[name]?.createdAt || '',
+        updatedAt: registry[name]?.updatedAt || '',
+        ip: registry[name]?.ip || 'Localhost',
+        userId: registry[name]?.userId || 'offline_user'
+      }));
+    }
+    window.getLocalProfilesWithMeta = getLocalProfilesWithMeta;
+
+    function populateSequentialDigitSelect() {
+      const select = document.getElementById('seq-digit-select');
+      if (!select) return;
+      const existingValues = Array.from(select.options).map(opt => opt.value);
+      for (let d = 2; d <= 9; d++) {
+        if (!existingValues.includes(String(d))) {
+          const opt = document.createElement('option');
+          opt.value = String(d);
+          opt.textContent = `${d} 的乘法`;
+          select.appendChild(opt);
+        }
+      }
+    }
+    window.populateSequentialDigitSelect = populateSequentialDigitSelect;
+
+    function setSuperQuestions(num) {
+      playSound('click');
+      window.appState.superQuestionsCount = num;
+      document.querySelectorAll('.sq-limit-btn').forEach(btn => {
+        btn.classList.remove('bg-purple-600', 'border-purple-400');
+        btn.classList.add('bg-white/20', 'border-white/10');
+      });
+      const targetId = num === 72 ? 'all' : num;
+      document.getElementById(`sq-btn-${targetId}`).classList.remove('bg-white/20', 'border-white/10');
+      document.getElementById(`sq-btn-${targetId}`).classList.add('bg-purple-600', 'border-purple-400');
+    }
+    window.setSuperQuestions = setSuperQuestions;
+
+    function setLeaderboardFilter(filter) {
+      playSound('click');
+      window.appState.leaderboardFilter = filter;
+      
+      document.querySelectorAll('.leader-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm', 'font-bold');
+        btn.classList.add('text-slate-500', 'font-medium');
+      });
+      
+      const targetId = `leader-filter-${filter}`;
+      const activeBtn = document.getElementById(targetId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-500', 'font-medium');
+        activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm', 'font-bold');
+      }
+      
+      loadLeaderboard(currentLeaderboardSort);
+    }
+    window.setLeaderboardFilter = setLeaderboardFilter;
+
+    function switchWeaknessView(viewMode) {
+      playSound('click');
+      window.appState.weaknessViewMode = viewMode;
+      document.querySelectorAll('.weak-view-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm', 'font-bold');
+        btn.classList.add('text-slate-500', 'font-medium');
+      });
+      const activeBtn = document.getElementById(`weak-view-${viewMode}`);
+      activeBtn.classList.remove('text-slate-500', 'font-medium');
+      activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm', 'font-bold');
+
+      const topTitle = document.getElementById('weakness-top-title');
+      const topTimeTitle = document.getElementById('weakness-top-time-title');
+      if (viewMode === 'basic') {
+        topTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> 基礎不熟數字排名 (常錯)`;
+        topTimeTitle.innerHTML = `<i class="fa-regular fa-clock text-indigo-500 mr-1"></i> 基礎猶豫數字排名 (卡頓)`;
+      } else {
+        topTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-fuchsia-500 mr-1"></i> 超級不熟數字排名 (常錯)`;
+        topTimeTitle.innerHTML = `<i class="fa-regular fa-clock text-purple-500 mr-1"></i> 超級猶豫數字排名 (卡頓)`;
+      }
+
+      renderWeaknessHeatmap();
+    }
+    window.switchWeaknessView = switchWeaknessView;
+
+    function switchWeaknessMetric(metric) {
+      playSound('click');
+      window.appState.weaknessMetric = metric;
+      
+      document.querySelectorAll('.weak-metric-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm', 'font-bold');
+        btn.classList.add('text-slate-500', 'font-medium');
+      });
+      
+      const activeBtn = document.getElementById(`weak-metric-${metric}`);
+      activeBtn.classList.remove('text-slate-500', 'font-medium');
+      activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm', 'font-bold');
+      
+      renderWeaknessHeatmap();
+    }
+    window.switchWeaknessMetric = switchWeaknessMetric;
+
+    function toggleManualNickname(mode) {
+      playSound('click');
+      const quickSection = document.getElementById('quick-profiles-section');
+      const manualContainer = document.getElementById('manual-nickname-container');
+      const saveBtn = document.getElementById('btn-save-profile');
+      const createFields = document.getElementById('create-role-fields');
+      const importFields = document.getElementById('import-role-fields');
+      const backBtn = document.getElementById('back-to-profiles-btn-container');
+
+      if (mode === 'cancel') {
+        quickSection.classList.remove('hidden');
+        manualContainer.classList.add('hidden');
+        saveBtn.classList.add('hidden');
+        return;
+      }
+
+      quickSection.classList.add('hidden');
+      manualContainer.classList.remove('hidden');
+      createFields.classList.remove('hidden');
+      importFields.classList.add('hidden');
+      saveBtn.classList.remove('hidden');
+      backBtn.classList.remove('hidden');
+      saveBtn.setAttribute('onclick', 'submitNewProfileCreation()');
+    }
+    window.toggleManualNickname = toggleManualNickname;
+
+    function getSafeNickname(nickname) {
+      return String(nickname || 'default').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+    }
+    window.getSafeNickname = getSafeNickname;
+
+    function normalizePairingCode(code) {
+      return String(code || '').trim().toUpperCase();
+    }
+    window.normalizePairingCode = normalizePairingCode;
+
+    function validateProfileLoginInput(name, code) {
+      if (!name) {
+        alertModal("請輸入暱稱", "請填寫練習生暱稱。第一次使用會自動建立帳號；之後同暱稱需輸入相同認證碼。");
+        return false;
+      }
+      if (window.appState.adminSettings.deletedUsers && window.appState.adminSettings.deletedUsers.includes(name)) {
+        alertModal("暱稱已被禁用", `暱稱【${name}】已列入黑名單，請使用其他暱稱！`);
+        return false;
+      }
+      if (!/^[A-Z0-9]{5}$/.test(code)) {
+        alertModal("格式不正確", "認證碼必須是【剛好 5 位】的大寫英文字母或數字。可按「隨機產生」自動建立。");
+        return false;
+      }
+      if (isWeakPairingCode(code)) {
+        alertModal("認證碼強度過低", "請勿使用 12345、00000、11111 這類過於簡單的認證碼。");
+        return false;
+      }
+      return true;
+    }
+    window.validateProfileLoginInput = validateProfileLoginInput;
+
+    async function submitNewProfileCreation() {
+      playSound('click');
+      const name = document.getElementById('nickname-input').value.trim();
+      let code = normalizePairingCode(document.getElementById('nickname-code-input').value);
+      if (!code) {
+        code = generatePairingCode();
+        document.getElementById('nickname-code-input').value = code;
+      }
+      if (!validateProfileLoginInput(name, code)) return;
+
+      const requestedMode = getLoginSyncMode();
+      const gasUrlReady = isConfiguredGasUrl(getGasUrl());
+      const shouldTryGas = requestedMode !== 'local' && gasUrlReady;
+
+      if (shouldTryGas) {
+        setLoginSyncStatus('正在用雲端資料庫驗證暱稱與認證碼...', 'blue');
+        try {
+          const result = await gasAuthenticateProfile(name, code);
+          if (result && result.status === 'success') {
+            window.appState.accountSyncMode = 'gas';
+            upsertLocalProfileMeta(name, code, {
+              ip: window.appState.userIP || '0.0.0.0',
+              userId: window.appState.userId || 'github_pages_user',
+              cloudProfile: true,
+              lastLoginAt: new Date().toISOString()
+            });
+            setLoginSyncStatus(result.isNew ? '雲端帳號已建立，之後用同一組暱稱與認證碼登入。' : '雲端登入成功。', 'green');
+            alertModal(result.isNew ? "雲端帳號已建立" : "雲端登入成功", result.isNew ? `已建立練習生【${name}】。請記住認證碼【 ${code} 】。` : `已驗證練習生【${name}】。`);
+            selectProfile(name);
+            return;
+          }
+          playSound('wrong');
+          setLoginSyncStatus(result?.message || '雲端驗證失敗。', 'red');
+          alertModal("雲端驗證失敗", result?.message || "暱稱或認證碼不正確。若只是臨時練習，可切換為本機模式。");
+          return;
+        } catch(e) {
+          console.warn('GAS 帳號驗證失敗，準備依模式處理：', e);
+          if (requestedMode === 'gas') {
+            setLoginSyncStatus('雲端模式連線失敗；請改用自動或本機模式。', 'red');
+            alertModal("雲端連線失敗", "目前無法連到 GAS。你可以把登入模式改成「自動」或「本機」，讓學生先練習；本機資料不會跨裝置同步。");
+            return;
+          }
+          setLoginSyncStatus('雲端暫時不可用，已改用本機模式繼續練習。', 'red');
+        }
+      } else if (requestedMode !== 'local' && !gasUrlReady) {
+        setLoginSyncStatus('尚未設定 GAS URL，已使用本機模式。', 'red');
+      }
+
+      // 本機登入 / 建立：GAS 未設定或自動模式失敗時仍可使用。
+      const registry = getLocalProfileRegistry();
+      const existing = registry[name];
+      if (existing && existing.pairingCode && existing.pairingCode !== '-----' && existing.pairingCode !== code) {
+        playSound('wrong');
+        alertModal("本機認證碼錯誤", `這台裝置上【${name}】已存在，請輸入當初設定的 5 碼認證碼，或切換到雲端模式驗證。`);
+        return;
+      }
+      const isNew = !existing || !existing.pairingCode || existing.pairingCode === '-----';
+      window.appState.accountSyncMode = 'local';
+      upsertLocalProfileMeta(name, code, { ip: window.appState.userIP || 'Localhost', userId: window.appState.userId || 'offline_user', localOnly: true, lastLoginAt: new Date().toISOString() });
+      alertModal(isNew ? "本機帳號已建立" : "本機登入成功", isNew ? `已在此裝置建立練習生【${name}】。認證碼為【 ${code} 】。` : `已驗證此裝置上的練習生【${name}】。`);
+      selectProfile(name);
+    }
+    window.submitNewProfileCreation = submitNewProfileCreation;
+
+    async function submitProfileImport() {
+      const importName = document.getElementById('import-nickname-input')?.value?.trim();
+      const importCode = normalizePairingCode(document.getElementById('import-code-input')?.value);
+      if (importName) document.getElementById('nickname-input').value = importName;
+      if (importCode) document.getElementById('nickname-code-input').value = importCode;
+      return submitNewProfileCreation();
+    }
+    window.submitProfileImport = submitProfileImport;
+
+    function isWeakPairingCode(code) {
+      const weakPatterns = [
+        "12345", "00000", "11111", "22222", "33333", "44444", "55555",
+        "66666", "77777", "88888", "99999", "ABCDE", "01234", "56789"
+      ];
+      return weakPatterns.includes(code);
+    }
+    window.isWeakPairingCode = isWeakPairingCode;
+
+    function checkUserDeletedStatus(nickname) {
+      const deletedList = window.appState.adminSettings.deletedUsers || [];
+      if (deletedList.includes(nickname)) {
+        alertModal("帳號已被刪除", `練習生【${nickname}】已由管理員從系統中刪除並禁用！`);
+        
+        let localProfiles = JSON.parse(localStorage.getItem('9x9_local_profiles') || '[]');
+        localProfiles = localProfiles.filter(n => n !== nickname);
+        localStorage.setItem('9x9_local_profiles', JSON.stringify(localProfiles));
+        const registry = getLocalProfileRegistry();
+        delete registry[nickname];
+        saveLocalProfileRegistry(registry);
+        
+        let localHistory = localStorage.getItem('9x9_offline_history');
+        if (localHistory) {
+          try {
+            let historyList = JSON.parse(localHistory);
+            historyList = historyList.filter(item => item.nickname !== nickname);
+            localStorage.setItem('9x9_offline_history', JSON.stringify(historyList));
+          } catch(ex) {}
+        }
+        
+        logoutProfile();
+        return true;
+      }
+      return false;
+    }
+    window.checkUserDeletedStatus = checkUserDeletedStatus;
+
+    async function selectProfile(nickname) {
+      if (checkUserDeletedStatus(nickname)) return;
+
+      playSound('correct');
+      localStorage.setItem('9x9_active_profile', nickname);
+      
+      upsertLocalProfileMeta(nickname);
+
+      window.appState.userId = (auth && auth.currentUser) ? auth.currentUser.uid : 'offline_user';
+
+      try {
+        await loadUserProfile();
+      } catch(e) { console.warn("載入角色資料失敗:", e); }
+
+      document.getElementById('user-display-name').textContent = nickname;
+      
+      showPanel('menu-panel');
+      recalculateWeaknessFromLogs();
+      renderWeaknessHeatmap();
+      renderWeaknessBankList();
+      loadHistory();
+      loadLeaderboard(currentLeaderboardSort);
+      checkDailyChallengeCompletion();
+    }
+    window.selectProfile = selectProfile;
+
+    function logoutProfile() {
+      playSound('click');
+      localStorage.removeItem('9x9_active_profile');
+      document.getElementById('user-display-name').textContent = "未登入";
+      showPanel('login-panel');
+      initLoginSyncModeUI();
+      scanAndShowProfiles();
+    }
+    window.logoutProfile = logoutProfile;
+
+    async function loadAdminGlobalSettings() {
+      if (useLocalStorageFallback) return;
+      try {
+        const adminDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
+        const docSnap = await getDoc(adminDocRef);
+        if (docSnap.exists()) {
+          const cloudSettings = docSnap.data();
+          window.appState.adminSettings = {
+            ...window.appState.adminSettings,
+            ...cloudSettings,
+            deletedUsers: cloudSettings.deletedUsers || [] 
+          };
+        } else {
+          await setDoc(adminDocRef, window.appState.adminSettings);
+        }
+      } catch (e) {
+        console.warn("無法取得雲端後台設定，採用預設值。");
+      }
+    }
+    window.loadAdminGlobalSettings = loadAdminGlobalSettings;
+
+    async function loadUserProfile() {
+      if (useLocalStorageFallback) return;
+      if (!auth || !auth.currentUser) return;
+      try {
+        const activeProfile = localStorage.getItem('9x9_active_profile') || 'default';
+        const safeNick = activeProfile.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+        
+        const profileDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', safeNick);
+        const docSnap = await getDoc(profileDocRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          window.appState.questionLogs = data.questionLogs || [];
+          window.appState.weaknessQuestionBank = data.weaknessQuestionBank || buildWeaknessBankFromLogs(window.appState.questionLogs || []);
+        } else {
+          window.appState.questionLogs = [];
+          window.appState.weaknessQuestionBank = {};
+        }
+      } catch (err) {
+        console.error("讀取 Profile 失敗", err);
+      }
+    }
+    window.loadUserProfile = loadUserProfile;
+
+    function setupOfflineUser() {
+      window.appState.userId = 'offline_user';
+      window.appState.userIP = 'Localhost';
+      document.getElementById('user-ip-display').textContent = `本機練習模式`;
+      
+      const savedLogs = localStorage.getItem('9x9_offline_question_logs');
+      try {
+        window.appState.questionLogs = savedLogs ? JSON.parse(savedLogs) : [];
+      } catch(e) {
+        window.appState.questionLogs = [];
+      }
+      try {
+        const savedBank = localStorage.getItem('9x9_offline_weakness_bank');
+        window.appState.weaknessQuestionBank = savedBank ? JSON.parse(savedBank) : buildWeaknessBankFromLogs(window.appState.questionLogs || []);
+      } catch(e) {
+        window.appState.weaknessQuestionBank = buildWeaknessBankFromLogs(window.appState.questionLogs || []);
+      }
+
+      const localAdmin = localStorage.getItem('9x9_offline_admin_settings');
+      if (localAdmin) {
+        try {
+          window.appState.adminSettings = JSON.parse(localAdmin);
+        } catch(e) {}
+      }
+
+      applyAdminSettingsToUI();
+      
+      // 重新開啟頁面時不自動跳過認證碼，避免不同學生共用裝置時直接進入上一位帳號。
+      localStorage.removeItem('9x9_active_profile');
+      showPanel('login-panel');
+      initLoginSyncModeUI();
+      scanAndShowProfiles();
+    }
+    window.setupOfflineUser = setupOfflineUser;
+
+    async function initAuth() {
+      if (useLocalStorageFallback) {
+        setupOfflineUser();
+        return;
+      }
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) {
+        console.error("Auth Error, switching to offline fallback:", error);
+        useLocalStorageFallback = true;
+        setupOfflineUser();
+      }
+    }
+    window.initAuth = initAuth;
+
+
+    // ==========================================
+    // 缺漏功能補齊：UI 套用、資料顯示、遊戲主流程
+    // ==========================================
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    window.escapeHtml = escapeHtml;
+
+    function alertModal(title, message) {
+      const modal = document.getElementById('custom-modal');
+      document.getElementById('modal-title').textContent = title || '提醒';
+      document.getElementById('modal-message').textContent = message || '';
+      document.getElementById('modal-btn-cancel').classList.add('hidden');
+      const confirmBtn = document.getElementById('modal-btn-confirm');
+      confirmBtn.textContent = '知道了';
+      confirmBtn.className = 'bg-indigo-600 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-indigo-700 transition font-sans';
+      confirmBtn.onclick = () => modal.classList.add('hidden');
+      modal.classList.remove('hidden');
+    }
+    window.alertModal = alertModal;
+
+    function confirmModal(title, message, onConfirm) {
+      const modal = document.getElementById('custom-modal');
+      document.getElementById('modal-title').textContent = title || '請確認';
+      document.getElementById('modal-message').textContent = message || '';
+      const cancelBtn = document.getElementById('modal-btn-cancel');
+      const confirmBtn = document.getElementById('modal-btn-confirm');
+      cancelBtn.classList.remove('hidden');
+      cancelBtn.textContent = '取消';
+      confirmBtn.textContent = '確定';
+      confirmBtn.className = 'bg-red-500 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-red-600 transition font-sans';
+      cancelBtn.onclick = () => modal.classList.add('hidden');
+      confirmBtn.onclick = async () => {
+        modal.classList.add('hidden');
+        if (typeof onConfirm === 'function') await onConfirm();
+      };
+      modal.classList.remove('hidden');
+    }
+    window.confirmModal = confirmModal;
+
+    async function fetchUserIP() {
+      // 外部 IP API 失敗時不影響主程式。
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        window.appState.userIP = data.ip || '0.0.0.0';
+      } catch (e) {
+        window.appState.userIP = '0.0.0.0';
+      }
+      const ipNode = document.getElementById('user-ip-display');
+      if (ipNode) ipNode.textContent = `IP: ${window.appState.userIP}`;
+    }
+    window.fetchUserIP = fetchUserIP;
+
+    function applyAdminSettingsToUI() {
+      const settings = window.appState.adminSettings || {};
+      const hideSuper = !!settings.hideSuperMode;
+      const forceDaily = !!settings.forceDailyChallenge;
+      const dailyCount = parseInt(settings.dailyChallengeCount, 10) || 25;
+
+      const superModeCard = document.getElementById('super-mode-card');
+      if (superModeCard) superModeCard.classList.toggle('hidden', hideSuper);
+
+      const dailyCountLabel = document.getElementById('daily-count-label');
+      if (dailyCountLabel) dailyCountLabel.textContent = dailyCount;
+
+      const adminDailyCount = document.getElementById('admin-daily-count');
+      if (adminDailyCount) adminDailyCount.value = dailyCount;
+
+      const adminToggleSuper = document.getElementById('admin-toggle-super');
+      if (adminToggleSuper) adminToggleSuper.checked = !hideSuper;
+
+      const adminToggleDaily = document.getElementById('admin-toggle-daily');
+      if (adminToggleDaily) adminToggleDaily.checked = forceDaily;
+
+      const gasInput = document.getElementById('admin-gas-url');
+      if (gasInput) gasInput.value = settings.gasUrl || DEFAULT_GAS_URL || '';
+    }
+    window.applyAdminSettingsToUI = applyAdminSettingsToUI;
+
+    function getTodayKey() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    window.getTodayKey = getTodayKey;
+
+    function checkDailyChallengeCompletion() {
+      const activeProfile = localStorage.getItem('9x9_active_profile') || '未登入';
+      const todayKey = getTodayKey();
+      const doneKey = `9x9_daily_done_${activeProfile}_${todayKey}`;
+      window.appState.hasCompletedDailyToday = localStorage.getItem(doneKey) === 'true';
+
+      const forceDaily = !!window.appState.adminSettings.forceDailyChallenge;
+      const locked = forceDaily && !window.appState.hasCompletedDailyToday;
+      const banner = document.getElementById('daily-lock-banner');
+      const dailyBox = document.getElementById('daily-challenge-box');
+      const statusBadge = document.getElementById('daily-status-badge');
+      const modes = document.getElementById('modes-grid-container');
+      const tabs = document.getElementById('content-tabs-container');
+
+      if (banner) {
+        banner.classList.toggle('hidden', !locked);
+        if (locked) banner.classList.add('flex');
+      }
+      if (dailyBox) dailyBox.classList.toggle('hidden', !forceDaily);
+      if (statusBadge) {
+        statusBadge.textContent = window.appState.hasCompletedDailyToday ? '今日已完成' : '尚未完成';
+        statusBadge.className = window.appState.hasCompletedDailyToday
+          ? 'text-xs bg-emerald-600 px-2 py-1 rounded font-bold'
+          : 'text-xs bg-red-600 px-2 py-1 rounded font-bold';
+      }
+
+      [modes, tabs].forEach(node => {
+        if (!node) return;
+        node.classList.toggle('locked-blur', locked);
+      });
+    }
+    window.checkDailyChallengeCompletion = checkDailyChallengeCompletion;
+
+    async function scanAndShowProfiles() {
+      const quickSection = document.getElementById('quick-profiles-section');
+      const listNode = document.getElementById('quick-profiles-list');
+      const manualContainer = document.getElementById('manual-nickname-container');
+      const saveBtn = document.getElementById('btn-save-profile');
+      if (!quickSection || !listNode) return;
+
+      let profiles = getLocalProfilesWithMeta().map(p => p.nickname);
+      profiles = profiles.filter(name => !checkUserDeletedStatus(name));
+      if (profiles.length === 0) {
+        quickSection.classList.add('hidden');
+        if (manualContainer) manualContainer.classList.remove('hidden');
+        if (saveBtn) {
+          saveBtn.classList.remove('hidden');
+          saveBtn.setAttribute('onclick', 'submitNewProfileCreation()');
+        }
+        return;
+      }
+
+      listNode.innerHTML = '';
+      profiles.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full bg-white hover:bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2 text-left text-sm font-bold text-slate-700 flex justify-between items-center';
+        btn.innerHTML = `<span><i class="fa-solid fa-user text-indigo-500 mr-2"></i>${escapeHtml(name)}</span><span class="text-xs text-indigo-500">帶入暱稱</span>`;
+        btn.onclick = () => {
+          document.getElementById('nickname-input').value = name;
+          document.getElementById('nickname-code-input').value = '';
+          toggleManualNickname('create');
+          document.getElementById('nickname-code-input').focus();
+        };
+        listNode.appendChild(btn);
+      });
+      quickSection.classList.remove('hidden');
+      if (manualContainer) manualContainer.classList.add('hidden');
+      if (saveBtn) saveBtn.classList.add('hidden');
+    }
+    window.scanAndShowProfiles = scanAndShowProfiles;
+
+    function formatTime(seconds) {
+      const safe = Math.max(0, Number(seconds) || 0);
+      const mins = Math.floor(safe / 60);
+      const secs = safe % 60;
+      return `${String(mins).padStart(2, '0')}:${secs.toFixed(2).padStart(5, '0')}`;
+    }
+    window.formatTime = formatTime;
+
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+    window.shuffleArray = shuffleArray;
+
+    function normalizeQuestionKey(a, b) {
+      return `${Number(a)}x${Number(b)}`;
+    }
+    window.normalizeQuestionKey = normalizeQuestionKey;
+
+    function buildQuestionFromKey(key) {
+      const [a, b] = String(key).split('x').map(Number);
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+      return { a, b, answer: a * b };
+    }
+    window.buildQuestionFromKey = buildQuestionFromKey;
+
+    function questionKeyFromQuestion(q) {
+      return normalizeQuestionKey(q.a, q.b);
+    }
+    window.questionKeyFromQuestion = questionKeyFromQuestion;
+
+    function uniqueQuestionsByKey(questions) {
+      const seen = new Set();
+      return (questions || []).filter(q => {
+        if (!q || !Number.isFinite(Number(q.a)) || !Number.isFinite(Number(q.b))) return false;
+        const key = questionKeyFromQuestion(q);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    window.uniqueQuestionsByKey = uniqueQuestionsByKey;
+
+    function selectRandomUniqueQuestions(pool, count) {
+      const uniquePool = uniqueQuestionsByKey(pool);
+      return shuffleArray(uniquePool).slice(0, Math.min(Number(count) || uniquePool.length, uniquePool.length));
+    }
+    window.selectRandomUniqueQuestions = selectRandomUniqueQuestions;
+
+    function getLatestLogByQuestion(logs) {
+      const latest = {};
+      (logs || []).forEach(log => {
+        if (!log || !log.q) return;
+        const current = latest[log.q];
+        if (!current || new Date(log.timestamp || 0).getTime() >= new Date(current.timestamp || 0).getTime()) {
+          latest[log.q] = log;
+        }
+      });
+      return latest;
+    }
+    window.getLatestLogByQuestion = getLatestLogByQuestion;
+
+    function getLongTimeSupplementQuestions(limit = 10, excludedKeys = new Set()) {
+      const latest = getLatestLogByQuestion(window.appState.questionLogs || []);
+      return Object.values(latest)
+        .filter(log => log && log.q && !excludedKeys.has(log.q))
+        .sort((a, b) => {
+          const timeDiff = Number(b.time || 0) - Number(a.time || 0);
+          if (timeDiff !== 0) return timeDiff;
+          return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+        })
+        .slice(0, limit)
+        .map(log => buildQuestionFromKey(log.q))
+        .filter(Boolean);
+    }
+    window.getLongTimeSupplementQuestions = getLongTimeSupplementQuestions;
+
+    function pruneWeaknessBankEntry(key) {
+      const bank = window.appState.weaknessQuestionBank || {};
+      const item = bank[key];
+      if (!item) return;
+      if (!item.sourceError && !item.sourceSlow) {
+        delete bank[key];
+      }
+    }
+    window.pruneWeaknessBankEntry = pruneWeaknessBankEntry;
+
+    function updateWeaknessQuestionBank(log) {
+      if (!log || !log.q) return;
+      if (!window.appState.weaknessQuestionBank) window.appState.weaknessQuestionBank = {};
+      const key = log.q;
+      const bank = window.appState.weaknessQuestionBank;
+      const existing = bank[key] || {
+        q: key,
+        a: log.a,
+        b: log.b,
+        sourceError: false,
+        sourceSlow: false,
+        correctStreak: 0,
+        lastWrongAt: null,
+        lastSlowAt: null,
+        lastSeenAt: null,
+        lastTime: null
+      };
+
+      existing.a = log.a;
+      existing.b = log.b;
+      existing.lastSeenAt = log.timestamp;
+      existing.lastTime = log.time;
+
+      if (!log.correct) {
+        existing.sourceError = true;
+        existing.correctStreak = 0;
+        existing.lastWrongAt = log.timestamp;
+      } else if (existing.sourceError) {
+        existing.correctStreak = (existing.correctStreak || 0) + 1;
+        if (existing.correctStreak >= 3) {
+          existing.sourceError = false;
+        }
+      }
+
+      const slowThreshold = Number(window.appState.weaknessSlowThresholdSeconds || 20);
+      if (Number(log.time) >= slowThreshold) {
+        existing.sourceSlow = true;
+        existing.lastSlowAt = log.timestamp;
+      } else {
+        // 20秒以上慢題依最近一次作答情況判斷；最近已低於門檻，就移除慢題標記。
+        existing.sourceSlow = false;
+      }
+
+      bank[key] = existing;
+      pruneWeaknessBankEntry(key);
+    }
+    window.updateWeaknessQuestionBank = updateWeaknessQuestionBank;
+
+    function buildWeaknessBankFromLogs(logs) {
+      const originalBank = window.appState.weaknessQuestionBank;
+      window.appState.weaknessQuestionBank = {};
+      (logs || []).forEach(log => updateWeaknessQuestionBank(log));
+      const rebuilt = { ...window.appState.weaknessQuestionBank };
+      window.appState.weaknessQuestionBank = originalBank || rebuilt;
+      return rebuilt;
+    }
+    window.buildWeaknessBankFromLogs = buildWeaknessBankFromLogs;
+
+    function getWeaknessBankQuestions(targetCount = 10) {
+      const bank = window.appState.weaknessQuestionBank || {};
+      const activeItems = Object.values(bank)
+        .filter(item => item && (item.sourceError || item.sourceSlow))
+        .sort((a, b) => {
+          // 錯題優先，其次是20秒以上慢題，再看最近作答與最後耗時。
+          const aPriority = (a.sourceError ? 3 : 0) + (a.sourceSlow ? 2 : 0);
+          const bPriority = (b.sourceError ? 3 : 0) + (b.sourceSlow ? 2 : 0);
+          if (bPriority !== aPriority) return bPriority - aPriority;
+          const timeDiff = Number(b.lastTime || 0) - Number(a.lastTime || 0);
+          if (timeDiff !== 0) return timeDiff;
+          return new Date(b.lastSeenAt || 0) - new Date(a.lastSeenAt || 0);
+        });
+
+      const selected = [];
+      const selectedKeys = new Set();
+      activeItems.forEach(item => {
+        const q = buildQuestionFromKey(item.q);
+        if (!q || selectedKeys.has(item.q)) return;
+        selected.push(q);
+        selectedKeys.add(item.q);
+      });
+
+      // 若核心題庫不足10題，用「最近作答中耗時較長」的題目補足，仍保持不重複。
+      if (selected.length < targetCount) {
+        getLongTimeSupplementQuestions(targetCount - selected.length, selectedKeys).forEach(q => {
+          const key = questionKeyFromQuestion(q);
+          if (!selectedKeys.has(key)) {
+            selected.push(q);
+            selectedKeys.add(key);
+          }
+        });
+      }
+
+      return uniqueQuestionsByKey(selected).slice(0, targetCount);
+    }
+    window.getWeaknessBankQuestions = getWeaknessBankQuestions;
+
+    function renderWeaknessBankList() {
+      // 題庫內容不直接列給玩家；弱點可以從「不熟數字」與「猶豫數字」排名推測。
+    }
+    window.renderWeaknessBankList = renderWeaknessBankList;
+
+    function buildQuestionPool(mode) {
+      const pool = [];
+      if (mode === 'super') {
+        for (let a = 11; a <= 19; a++) {
+          for (let b = 2; b <= 9; b++) pool.push({ a, b, answer: a * b });
+        }
+        return pool;
+      }
+
+      if (mode === 'sequential') {
+        const type = window.appState.seqRangeType;
+        if (type === 'digit' && window.appState.seqSelectedDigit) {
+          const d = Number(window.appState.seqSelectedDigit);
+          for (let b = 2; b <= 9; b++) pool.push({ a: d, b, answer: d * b });
+          for (let a = 2; a <= 9; a++) if (a !== d) pool.push({ a, b: d, answer: a * d });
+          return pool;
+        }
+        if (type === 'smart') {
+          // 與分析網格的「啟動弱點題庫特訓」使用同一份題庫。
+          return getWeaknessBankQuestions(10);
+        }
+      }
+
+      for (let a = 2; a <= 9; a++) {
+        for (let b = 2; b <= 9; b++) pool.push({ a, b, answer: a * b });
+      }
+      return pool;
+    }
+    window.buildQuestionPool = buildQuestionPool;
+
+    function getQuestionCountForMode(mode, poolLength) {
+      if (mode === 'daily') return Math.min(parseInt(window.appState.adminSettings.dailyChallengeCount, 10) || 25, poolLength);
+      if (mode === 'challenge') return Math.min(window.appState.challengeQuestionsCount || 25, poolLength);
+      if (mode === 'super') return Math.min(window.appState.superQuestionsCount || 25, poolLength);
+      return poolLength;
+    }
+    window.getQuestionCountForMode = getQuestionCountForMode;
+
+    function getModeDisplayName(mode) {
+      const names = {
+        sequential: '加強熟悉模式',
+        challenge: '極限挑戰模式',
+        super: '超級極限挑戰',
+        weakness: '弱點題庫特訓',
+        daily: '每日極限任務'
+      };
+      return names[mode] || '練習模式';
+    }
+    window.getModeDisplayName = getModeDisplayName;
+
+    function updateTimer() {
+      if (!window.appState.startTime) return;
+      const elapsed = (Date.now() - window.appState.startTime) / 1000;
+      window.appState.elapsedTimeSeconds = elapsed;
+      const timer = document.getElementById('game-timer');
+      if (timer) timer.textContent = formatTime(elapsed);
+    }
+    window.updateTimer = updateTimer;
+
+    function renderQuestion() {
+      const q = window.appState.questions[window.appState.currentQuestionIndex];
+      if (!q) {
+        finishGame();
+        return;
+      }
+      const num1 = document.getElementById('num-1');
+      const num2 = document.getElementById('num-2');
+      const answerDisplay = document.getElementById('answer-display');
+      const progressText = document.getElementById('game-progress-text');
+      const progress = document.getElementById('game-progress');
+      const modeName = document.getElementById('game-mode-name');
+
+      if (num1) num1.textContent = q.a;
+      if (num2) num2.textContent = q.b;
+      if (answerDisplay) answerDisplay.textContent = '?';
+      if (progressText) progressText.textContent = `第 ${window.appState.currentQuestionIndex + 1} / ${window.appState.questions.length} 題`;
+      if (progress) progress.style.width = `${(window.appState.currentQuestionIndex / window.appState.questions.length) * 100}%`;
+      if (modeName) modeName.textContent = getModeDisplayName(window.appState.currentMode);
+      window.appState.currentInput = '';
+      window.appState.questionStartTime = Date.now();
+      window.appState.isTransitioning = false;
+    }
+    window.renderQuestion = renderQuestion;
+
+    function startPractice(mode) {
+      if (mode !== 'daily' && window.appState.adminSettings.forceDailyChallenge && !window.appState.hasCompletedDailyToday) {
+        alertModal('尚未解鎖', '請先完成今日每日挑戰，再進入其他練習模式。');
+        return;
+      }
+
+      playSound('click');
+      window.appState.currentMode = mode;
+      let pool = uniqueQuestionsByKey(buildQuestionPool(mode));
+      const count = getQuestionCountForMode(mode, pool.length);
+      if (count <= 0) {
+        alertModal('目前沒有題目', '尚無可用題目。若使用弱點題庫特訓，請先完成一些一般練習以累積錯題或慢題紀錄。');
+        return;
+      }
+
+      // 每日挑戰、挑戰模式、超級挑戰與弱點題庫特訓都以「不重複」為原則抽題。
+      // 循序全套與指定乘數則保留固定順序，但仍會去除重複題目。
+      window.appState.questions = (mode === 'sequential' && window.appState.seqRangeType !== 'smart')
+        ? pool.slice(0, count)
+        : selectRandomUniqueQuestions(pool, count);
+      window.appState.currentQuestionIndex = 0;
+      window.appState.correctCount = 0;
+      window.appState.currentInput = '';
+      window.appState.elapsedTimeSeconds = 0;
+      window.appState.questionLogs = window.appState.questionLogs || [];
+      window.appState.startTime = Date.now();
+      window.appState.currentSessionId = `${getSafeNickname(localStorage.getItem('9x9_active_profile') || 'student')}_${window.appState.currentMode}_${window.appState.startTime}`;
+      window.appState.isSavingScore = false;
+      clearInterval(window.appState.timerInterval);
+      window.appState.timerInterval = setInterval(updateTimer, 30);
+
+      showPanel('game-panel');
+      renderQuestion();
+    }
+    window.startPractice = startPractice;
+
+    function startDailyChallenge() {
+      startPractice('daily');
+    }
+    window.startDailyChallenge = startDailyChallenge;
+
+    function startWeaknessSpecialTraining() {
+      if (window.appState.adminSettings.forceDailyChallenge && !window.appState.hasCompletedDailyToday) {
+        alertModal('尚未解鎖', '請先完成今日每日挑戰，再進入弱點題庫特訓。');
+        return;
+      }
+
+      let questions = getWeaknessBankQuestions();
+
+      // 舊資料相容：若尚未建立題庫，先用既有答題紀錄重建一次。
+      if (questions.length === 0 && (window.appState.questionLogs || []).length > 0) {
+        window.appState.weaknessQuestionBank = buildWeaknessBankFromLogs(window.appState.questionLogs || []);
+        questions = getWeaknessBankQuestions();
+      }
+
+      if (questions.length === 0) {
+        alertModal('弱點題庫目前是空的', '答錯的題目會自動進入題庫；答錯與 20 秒以上的題目會自動進入題庫；若不足 10 題，會用最近答題時間較長的題目補足。請先完成一次一般練習或挑戰來累積資料。');
+        return;
+      }
+
+      playSound('click');
+      window.appState.currentMode = 'weakness';
+      window.appState.questions = selectRandomUniqueQuestions(questions, 10);
+      window.appState.currentQuestionIndex = 0;
+      window.appState.correctCount = 0;
+      window.appState.currentInput = '';
+      window.appState.elapsedTimeSeconds = 0;
+      window.appState.startTime = Date.now();
+      window.appState.currentSessionId = `${getSafeNickname(localStorage.getItem('9x9_active_profile') || 'student')}_weakness_${window.appState.startTime}`;
+      window.appState.isSavingScore = false;
+      clearInterval(window.appState.timerInterval);
+      window.appState.timerInterval = setInterval(updateTimer, 30);
+      showPanel('game-panel');
+      renderQuestion();
+    }
+    window.startWeaknessSpecialTraining = startWeaknessSpecialTraining;
+
+    function showFeedback(correct) {
+      const overlay = document.getElementById('feedback-overlay');
+      const icon = document.getElementById('feedback-icon');
+      if (!overlay || !icon) return;
+      icon.textContent = correct ? '✅' : '❌';
+      overlay.classList.remove('opacity-0');
+      setTimeout(() => overlay.classList.add('opacity-0'), 180);
+    }
+    window.showFeedback = showFeedback;
+
+    async function pressKey(key) {
+      if (document.getElementById('game-panel').classList.contains('hidden')) return;
+      if (window.appState.isTransitioning) return;
+      const answerDisplay = document.getElementById('answer-display');
+      if (!answerDisplay) return;
+
+      if (key === 'backspace') {
+        window.appState.currentInput = window.appState.currentInput.slice(0, -1);
+        answerDisplay.textContent = window.appState.currentInput || '?';
+        playSound('click');
+        return;
+      }
+      if (key === 'clear') {
+        window.appState.currentInput = '';
+        answerDisplay.textContent = '?';
+        playSound('click');
+        return;
+      }
+      if (key >= '0' && key <= '9') {
+        if (window.appState.currentInput.length < 3) {
+          window.appState.currentInput += key;
+          answerDisplay.textContent = window.appState.currentInput;
+          playSound('click');
+        }
+        return;
+      }
+      if (key !== 'enter') return;
+      if (!window.appState.currentInput) return;
+
+      const q = window.appState.questions[window.appState.currentQuestionIndex];
+      if (!q) return;
+      const timeSpent = Math.max(0.01, (Date.now() - window.appState.questionStartTime) / 1000);
+      const userAnswer = parseInt(window.appState.currentInput, 10);
+      const correct = userAnswer === q.answer;
+      if (correct) window.appState.correctCount += 1;
+
+      const log = {
+        q: `${q.a}x${q.b}`,
+        a: q.a,
+        b: q.b,
+        answer: q.answer,
+        userAnswer,
+        correct,
+        time: parseFloat(timeSpent.toFixed(2)),
+        mode: window.appState.currentMode,
+        timestamp: new Date().toISOString()
+      };
+      window.appState.questionLogs.push(log);
+      updateWeaknessQuestionBank(log);
+      renderWeaknessBankList();
+      playSound(correct ? 'correct' : 'wrong');
+      showFeedback(correct);
+      window.appState.isTransitioning = true;
+
+      setTimeout(() => {
+        window.appState.currentQuestionIndex += 1;
+        if (window.appState.currentQuestionIndex >= window.appState.questions.length) {
+          finishGame();
+        } else {
+          renderQuestion();
+        }
+      }, correct ? 180 : 350);
+    }
+    window.pressKey = pressKey;
+
+    async function persistProfileLogs() {
+      const activeProfile = localStorage.getItem('9x9_active_profile') || '本機練習生';
+      if (useLocalStorageFallback) {
+        upsertLocalProfileMeta(activeProfile);
+        localStorage.setItem('9x9_offline_question_logs', JSON.stringify(window.appState.questionLogs || []));
+        localStorage.setItem('9x9_offline_weakness_bank', JSON.stringify(window.appState.weaknessQuestionBank || {}));
+        return;
+      }
+      if (!db) return;
+      try {
+        const safeNick = activeProfile.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+        const profileDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', safeNick);
+        await setDoc(profileDocRef, {
+          nickname: activeProfile,
+          questionLogs: window.appState.questionLogs || [],
+          weaknessQuestionBank: window.appState.weaknessQuestionBank || {},
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.error('儲存個人答題紀錄失敗:', e);
+      }
+    }
+    window.persistProfileLogs = persistProfileLogs;
+
+    async function syncCurrentLocalDataToGasSilently() {
+      const gasUrl = getGasUrl();
+      if (!isConfiguredGasUrl(gasUrl)) return false;
+      try {
+        const profiles = getLocalProfilesWithMeta();
+        let scores = [];
+        try { scores = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch(e) { scores = []; }
+        if (profiles.length === 0 && scores.length === 0) return false;
+        await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: 'github-gas-4.0-auto' })
+        });
+        return true;
+      } catch(e) {
+        console.warn('背景同步到 GAS 失敗，已保留本機紀錄：', e);
+        return false;
+      }
+    }
+    window.syncCurrentLocalDataToGasSilently = syncCurrentLocalDataToGasSilently;
+
+    async function saveScoreRecord(result) {
+      const activeProfile = localStorage.getItem('9x9_active_profile') || '本機練習生';
+      const recordId = result.recordId || window.appState.currentSessionId || `${getSafeNickname(activeProfile)}_${Date.now()}`;
+      const record = {
+        recordId,
+        nickname: activeProfile,
+        mode: result.mode,
+        questionsCount: result.questionsCount,
+        correctCount: result.correctCount,
+        accuracy: result.accuracy,
+        duration: result.duration,
+        formattedTime: result.formattedTime,
+        weightedScore: result.weightedScore,
+        timestamp: result.timestamp || new Date().toISOString(),
+        ip: window.appState.userIP || '0.0.0.0',
+        userId: window.appState.userId || 'offline_user'
+      };
+
+      if (useLocalStorageFallback) {
+        let history = [];
+        try { history = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (e) { history = []; }
+        const idx = history.findIndex(item => item.recordId === recordId);
+        if (idx >= 0) history[idx] = { ...history[idx], ...record };
+        else history.unshift(record);
+        localStorage.setItem('9x9_offline_history', JSON.stringify(history.slice(0, 500)));
+      } else if (db) {
+        try {
+          const publicScoreRef = doc(db, 'artifacts', appId, 'public', 'data', 'scores', recordId);
+          await setDoc(publicScoreRef, record, { merge: true });
+        } catch (e) {
+          console.error('儲存排行榜成績失敗:', e);
+        }
+      }
+
+      // GitHub/GAS 版：完成練習後嘗試背景同步；GAS 失效不影響學生使用。
+      syncCurrentLocalDataToGasSilently();
+
+      if (result.mode === 'daily') {
+        localStorage.setItem(`9x9_daily_done_${activeProfile}_${getTodayKey()}`, 'true');
+        window.appState.hasCompletedDailyToday = true;
+      }
+    }
+    window.saveScoreRecord = saveScoreRecord;
+
+    async function finishGame() {
+      if (window.appState.isSavingScore) return;
+      window.appState.isSavingScore = true;
+      window.appState.isTransitioning = true;
+      clearInterval(window.appState.timerInterval);
+      updateTimer();
+
+      const duration = parseFloat((window.appState.elapsedTimeSeconds || ((Date.now() - window.appState.startTime) / 1000)).toFixed(2));
+      const questionsCount = window.appState.questions.length || 1;
+      const accuracy = parseFloat(((window.appState.correctCount / questionsCount) * 100).toFixed(1));
+      const avgTime = duration / questionsCount;
+      const weightedScore = accuracy > 0 ? parseFloat(((avgTime * 100) * (100 / accuracy)).toFixed(1)) : 99999;
+      const result = {
+        recordId: window.appState.currentSessionId || `${getSafeNickname(localStorage.getItem('9x9_active_profile') || 'student')}_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        mode: window.appState.currentMode,
+        questionsCount,
+        correctCount: window.appState.correctCount,
+        accuracy,
+        duration,
+        formattedTime: formatTime(duration),
+        weightedScore
+      };
+      window.appState.lastResult = result;
+
+      await persistProfileLogs();
+      await saveScoreRecord(result);
+      recalculateWeaknessFromLogs();
+      checkDailyChallengeCompletion();
+
+      document.getElementById('result-mode').textContent = getModeDisplayName(result.mode);
+      document.getElementById('result-time').textContent = result.formattedTime;
+      document.getElementById('result-accuracy').textContent = `${result.accuracy}%`;
+      document.getElementById('result-weighted-score').textContent = result.weightedScore;
+      const progress = document.getElementById('game-progress');
+      if (progress) progress.style.width = '100%';
+      showPanel('result-panel');
+    }
+    window.finishGame = finishGame;
+
+    function backToMenu() {
+      playSound('click');
+      clearInterval(window.appState.timerInterval);
+      showPanel('menu-panel');
+      recalculateWeaknessFromLogs();
+      renderWeaknessHeatmap();
+      renderWeaknessBankList();
+      loadHistory();
+      loadLeaderboard(currentLeaderboardSort);
+      checkDailyChallengeCompletion();
+    }
+    window.backToMenu = backToMenu;
+
+    function retryGame() {
+      startPractice(window.appState.currentMode || 'challenge');
+    }
+    window.retryGame = retryGame;
+
+    function quitGameModal() {
+      confirmModal('確定要退出嗎？', '目前這次挑戰尚未結算，退出後本次進度不會保存為成績。', () => {
+        clearInterval(window.appState.timerInterval);
+        backToMenu();
+      });
+    }
+    window.quitGameModal = quitGameModal;
+
+    async function loadHistory() {
+      const tbody = document.getElementById('history-tbody');
+      if (!tbody) return;
+      const activeProfile = localStorage.getItem('9x9_active_profile') || '本機練習生';
+      let list = [];
+
+      if (useLocalStorageFallback) {
+        try { list = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (e) { list = []; }
+        list = list.filter(item => !item.nickname || item.nickname === activeProfile);
+      } else {
+        try {
+          const scoresColRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+          const querySnapshot = await getDocs(scoresColRef);
+          querySnapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.nickname === activeProfile) list.push(data);
+          });
+        } catch (e) { console.error('讀取歷史紀錄失敗:', e); }
+      }
+
+      list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400 font-sans">目前尚無練習紀錄。</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      list.slice(0, 50).forEach(item => {
+        const date = new Date(item.timestamp).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50';
+        row.innerHTML = `
+          <td class="py-2 px-3">${date}</td>
+          <td class="py-2 px-3 font-sans">${getModeDisplayName(item.mode)}</td>
+          <td class="py-2 px-3 text-center">${item.questionsCount || '-'} 題</td>
+          <td class="py-2 px-3 text-center font-bold text-indigo-600">${item.accuracy ?? '-'}%</td>
+          <td class="py-2 px-3 text-center"><span class="${item.questionsCount ? getTimeGradeClass((item.duration || 0) / item.questionsCount) : 'bg-white'} px-2 py-0.5 rounded-lg number-font font-bold">${item.formattedTime || formatTime(item.duration || 0)}</span></td>`;
+        tbody.appendChild(row);
+      });
+    }
+    window.loadHistory = loadHistory;
+
+    async function loadLeaderboard(sortType = 'weighted') {
+      currentLeaderboardSort = sortType;
+      const tbody = document.getElementById('leaderboard-tbody');
+      if (!tbody) return;
+      let list = [];
+
+      if (useLocalStorageFallback) {
+        try { list = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (e) { list = []; }
+      } else {
+        try {
+          const scoresColRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+          const querySnapshot = await getDocs(scoresColRef);
+          querySnapshot.forEach(docSnap => list.push(docSnap.data()));
+        } catch (e) { console.error('讀取排行榜失敗:', e); }
+      }
+
+      const filter = window.appState.leaderboardFilter;
+      list = list.filter(item => {
+        if (filter === 'all') return true;
+        if (filter === 'full') return item.questionsCount === 64 || item.questionsCount === 72;
+        return item.questionsCount === filter;
+      });
+      list.sort((a, b) => (a.weightedScore ?? 99999) - (b.weightedScore ?? 99999));
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 font-sans">目前尚無排行榜紀錄。</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      list.slice(0, 50).forEach((item, idx) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50';
+        row.innerHTML = `
+          <td class="py-2 px-3 font-bold">${idx + 1}</td>
+          <td class="py-2 px-3 font-bold">${escapeHtml(item.nickname || '匿名')}</td>
+          <td class="py-2 px-3 text-center">${getModeDisplayName(item.mode)}</td>
+          <td class="py-2 px-3 text-center">${item.questionsCount || '-'} 題</td>
+          <td class="py-2 px-3 text-center font-mono">${item.accuracy ?? '-'}%</td>
+          <td class="py-2 px-3 text-center">${item.questionsCount ? `<span class="${getTimeGradeClass((item.duration || 0) / item.questionsCount)} px-2 py-0.5 rounded-lg number-font font-bold">${((item.duration || 0) / item.questionsCount).toFixed(2)} 秒</span>` : '-'}</td>
+          <td class="py-2 px-3 text-right font-bold text-indigo-600 font-mono">${item.weightedScore ?? '-'}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+    window.loadLeaderboard = loadLeaderboard;
+
+    function getSmartWeakestDigit() {
+      const counts = {};
+      Object.entries(window.appState.weaknesses || {}).forEach(([key, val]) => {
+        const [a, b] = key.split('x').map(Number);
+        if (a >= 2 && a <= 9) counts[a] = (counts[a] || 0) + val;
+        if (b >= 2 && b <= 9) counts[b] = (counts[b] || 0) + val;
+      });
+      const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      return best ? { digit: best[0], score: best[1] } : { digit: null, score: 0 };
+    }
+    window.getSmartWeakestDigit = getSmartWeakestDigit;
+
+    function getTimeGradeClass(seconds) {
+      if (!seconds && seconds !== 0) return 'bg-white text-slate-500';
+      const t = Number(seconds);
+      if (t <= 5) return 'time-grade-0';
+      if (t <= 10) return 'time-grade-1';
+      if (t < 20) return 'time-grade-2';
+      return 'time-grade-3';
+    }
+    window.getTimeGradeClass = getTimeGradeClass;
+
+    function getTimeGradeText(seconds) {
+      if (!seconds && seconds !== 0) return '尚無紀錄';
+      const t = Number(seconds);
+      if (t <= 5) return '精熟';
+      if (t <= 10) return '稍慢';
+      if (t < 20) return '需練習';
+      return '重點加強';
+    }
+    window.getTimeGradeText = getTimeGradeText;
+
+    function renderWeaknessHeatmap() {
+      const cols = document.getElementById('heatmap-cols');
+      const grid = document.getElementById('heatmap-grid');
+      const topWeak = document.getElementById('top-weak-list');
+      const topTime = document.getElementById('top-weak-time-list');
+      if (!cols || !grid) return;
+
+      const isSuper = window.appState.weaknessViewMode === 'super';
+      const rows = isSuper ? Array.from({ length: 9 }, (_, i) => i + 11) : Array.from({ length: 8 }, (_, i) => i + 2);
+      const colNums = Array.from({ length: 8 }, (_, i) => i + 2);
+      cols.style.gridTemplateColumns = `36px repeat(${colNums.length}, minmax(32px, 1fr))`;
+      cols.innerHTML = `<div></div>${colNums.map(n => `<div>${n}</div>`).join('')}`;
+      grid.innerHTML = '';
+
+      rows.forEach(a => {
+        const row = document.createElement('div');
+        row.className = 'grid gap-1 items-center';
+        row.style.gridTemplateColumns = `36px repeat(${colNums.length}, minmax(32px, 1fr))`;
+        row.innerHTML = `<div class="text-center font-bold text-slate-400 text-xs">${a}</div>`;
+        colNums.forEach(b => {
+          const key = `${a}x${b}`;
+          const err = window.appState.weaknesses[key] || 0;
+          const timeData = window.appState.questionTimes[key];
+          const avg = timeData ? timeData.avgTime : null;
+          let weakClass = 'bg-white';
+          let label = '-';
+          if (window.appState.weaknessMetric === 'errors') {
+            label = err || (avg ? '0' : '-');
+            weakClass = err >= 3 ? 'weak-3' : err === 2 ? 'weak-2' : err === 1 ? 'weak-1' : avg ? 'weak-0' : 'bg-white';
+          } else {
+            label = avg ? avg.toFixed(1) : '-';
+            weakClass = avg ? getTimeGradeClass(avg) : 'bg-white';
+          }
+          const cell = document.createElement('button');
+          cell.className = `${weakClass} rounded-lg h-9 text-[11px] font-bold border border-slate-200 hover:ring-2 hover:ring-indigo-300 transition number-font`;
+          cell.title = `${a} × ${b}：錯誤 ${err} 次，平均 ${avg ? avg.toFixed(2) : '無'} 秒${avg ? '（' + getTimeGradeText(avg) + '）' : ''}`;
+          cell.textContent = label;
+          cell.onclick = () => alertModal(`${a} × ${b} 詳細資料`, `錯誤次數：${err} 次；平均反應：${avg ? avg.toFixed(2) + ' 秒（' + getTimeGradeText(avg) + '）' : '尚無紀錄'}`);
+          row.appendChild(cell);
+        });
+        grid.appendChild(row);
+      });
+
+      if (topWeak) {
+        const entries = Object.entries(window.appState.weaknesses || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        topWeak.innerHTML = entries.length ? entries.map(([k, v]) => `<div class="flex justify-between bg-white rounded-lg px-3 py-1.5 border"><span>${k.replace('x', ' × ')}</span><b>${v} 次</b></div>`).join('') : '<p class="text-slate-400 py-3 font-sans">目前還沒有答錯紀錄。</p>';
+      }
+      if (topTime) {
+        const entries = Object.entries(window.appState.questionTimes || {}).sort((a, b) => (b[1].avgTime || 0) - (a[1].avgTime || 0)).slice(0, 5);
+        topTime.innerHTML = entries.length ? entries.map(([k, v]) => `<div class="flex justify-between bg-white rounded-lg px-3 py-1.5 border items-center"><span>${k.replace('x', ' × ')}</span><b class="${getTimeGradeClass(v.avgTime)} px-2 py-0.5 rounded-lg number-font">${v.avgTime.toFixed(2)} 秒｜${getTimeGradeText(v.avgTime)}</b></div>`).join('') : '<p class="text-slate-400 py-3 font-sans">目前還沒有答題秒數紀錄。</p>';
+      }
+      renderWeaknessBankList();
+    }
+    window.renderWeaknessHeatmap = renderWeaknessHeatmap;
+
+
+    // --- 靜態 DOM 元素事件接聽器 ---
+
+    window.addEventListener('keydown', (e) => {
+      if (document.activeElement.tagName === 'INPUT') return;
+      if (window.appState.isTransitioning) return; // 🔒 狀態鎖保護
+
+      if (e.key >= '0' && e.key <= '9') {
+        pressKey(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        pressKey('backspace');
+      } else if (e.key === 'Delete') {
+        pressKey('clear');
+      } else if (e.key === 'Enter') {
+        pressKey('enter');
+      }
+    });
+
+
+    // --- 啟動與初始化程序執行 ---
+    populateSequentialDigitSelect();
+
+    if (!useLocalStorageFallback) {
+      initAuth();
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          window.appState.user = user;
+          window.appState.userId = user.uid; // 確保全域狀態使用真實 uid
+          
+          try {
+            await fetchUserIP();
+          } catch(e) { console.warn("獲取 IP 失敗:", e); }
+
+          try {
+            await loadAdminGlobalSettings(); 
+          } catch(e) { console.warn("載入後台全域設定失敗:", e); }
+
+          applyAdminSettingsToUI();
+
+          // 重新開啟頁面時不自動跳過認證碼，避免共用設備直接進入上一位學生帳號。
+          localStorage.removeItem('9x9_active_profile');
+          document.getElementById('user-display-name').textContent = "未登入";
+          showPanel('login-panel');
+          initLoginSyncModeUI();
+          await scanAndShowProfiles();
+        } else {
+          showPanel('login-panel');
+        }
+      });
+    } else {
+      setupOfflineUser();
+    }
+
+  </script>
+</body>
+</html>

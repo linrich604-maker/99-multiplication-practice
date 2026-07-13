@@ -846,8 +846,8 @@
     // ==========================================
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyKuv3FLS9z6Bznib8kNwIOHZ8sgxRXkrR1gZM-vvHXAMTVeT0lsPEZM7HSGUkp36Uf/exec";
     const GAS_SYNC_TOKEN = "linrich-99x9-2026";
-    const APP_VERSION = "github-gas-5.4-admin-daily-fixes";
-    const EXPECTED_GAS_VERSION = "5.3-auto-local-sync";
+    const APP_VERSION = "github-gas-5.5-sync-verified";
+    const EXPECTED_GAS_VERSION = "5.5-sync-verified";
     const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v5";
     const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v5";
     const ADMIN_MAX_FAILED_ATTEMPTS = 5;
@@ -1265,7 +1265,7 @@
           ip: window.appState.userIP || '0.0.0.0'
         }, 8000);
 
-        if (result && result.status === 'success') {
+        if (result && result.status === 'success' && result.authenticated === true && result.adminSession) {
           localStorage.removeItem(ADMIN_ATTEMPT_STORAGE_KEY);
           localStorage.removeItem(ADMIN_LOCK_STORAGE_KEY);
           sessionStorage.setItem('9x9_admin_verified', '1');
@@ -2368,7 +2368,7 @@
           nickname,
           dateKey: getTodayKey()
         }, 8000);
-        if (result && result.status === 'success' && result.completed) {
+        if (result && result.status === 'success' && result.completed === true) {
           localStorage.setItem(`9x9_daily_done_${nickname}_${getTodayKey()}`, 'true');
           window.appState.hasCompletedDailyToday = true;
         } else if (result && result.status === 'success') {
@@ -3215,10 +3215,39 @@
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({ token: GAS_SYNC_TOKEN, profiles, scores, appVersion: APP_VERSION, clientVersion: APP_VERSION, clientSentAt: new Date().toISOString() })
         });
-        window.appState.accountSyncMode = 'gas';
-        updateTopSyncStatus('gas');
-        if (!options.skipStatusCheck) checkGasSyncStatus().catch(() => {});
-        return true;
+
+        // no-cors 只能證明請求已送出，不能證明試算表真的寫入。
+        // 若本次有最新紀錄，使用 recordId 向 GAS 回查，最多重試 3 次。
+        let verified = !latestRecord || !latestRecord.recordId;
+        if (latestRecord && latestRecord.recordId) {
+          for (let attempt = 0; attempt < 3 && !verified; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 700 + attempt * 600));
+            try {
+              const check = await jsonpRequest(gasUrl, {
+                action: 'recordExists',
+                token: GAS_SYNC_TOKEN,
+                recordId: latestRecord.recordId
+              }, 7000);
+              verified = !!(check && check.status === 'success' && check.exists === true);
+            } catch (verifyError) {
+              console.warn('成績寫入回查失敗：', verifyError);
+            }
+          }
+        }
+
+        if (verified) {
+          window.appState.accountSyncMode = 'gas';
+          updateTopSyncStatus('gas');
+          localStorage.setItem('9x9_has_unsynced_local_data', 'false');
+          localStorage.setItem('9x9_last_verified_sync_at', new Date().toISOString());
+          if (!options.skipStatusCheck) checkGasSyncStatus().catch(() => {});
+          return true;
+        }
+
+        // 未確認寫入時保留本機待同步標記，不把「已送出」誤當成「已同步」。
+        localStorage.setItem('9x9_has_unsynced_local_data', 'true');
+        console.warn('GAS 請求已送出，但尚未確認 recordId 已寫入試算表。');
+        return false;
       } catch(e) {
         console.warn('背景同步到 GAS 失敗，已保留本機紀錄：', e);
         return false;
@@ -3263,6 +3292,10 @@
       if (result.mode === 'daily') {
         localStorage.setItem(`9x9_daily_done_${activeProfile}_${getTodayKey()}`, 'true');
         window.appState.hasCompletedDailyToday = true;
+        // 成績同步完成後再向雲端確認一次；若 GAS 暫時失效，仍保留本機完成狀態。
+        if (window.appState.accountSyncMode === 'gas') {
+          setTimeout(() => refreshDailyCompletionFromCloud(activeProfile).finally(() => checkDailyChallengeCompletion()), 1200);
+        }
       }
     }
     window.saveScoreRecord = saveScoreRecord;

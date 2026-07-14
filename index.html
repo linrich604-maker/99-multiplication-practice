@@ -851,8 +851,8 @@
     // ==========================================
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyKuv3FLS9z6Bznib8kNwIOHZ8sgxRXkrR1gZM-vvHXAMTVeT0lsPEZM7HSGUkp36Uf/exec";
     const GAS_SYNC_TOKEN = "linrich-99x9-2026";
-    const APP_VERSION = "github-gas-5.7-growth-efficient";
-    const EXPECTED_GAS_VERSION = "5.5-sync-verified";
+    const APP_VERSION = "github-gas-5.8-fast-cache";
+    const EXPECTED_GAS_VERSION = "5.8-fast-cache";
     const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v5";
     const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v5";
     const ADMIN_MAX_FAILED_ATTEMPTS = 5;
@@ -3360,11 +3360,7 @@
       };
       window.appState.lastResult = result;
 
-      await persistProfileLogs();
-      await saveScoreRecord(result);
-      recalculateWeaknessFromLogs();
-      checkDailyChallengeCompletion();
-
+      // 畫面優先：先顯示結算，不等待 GAS、Firebase 或寫入回查。
       document.getElementById('result-mode').textContent = getModeDisplayName(result.mode);
       document.getElementById('result-time').textContent = result.formattedTime;
       document.getElementById('result-accuracy').textContent = `${result.accuracy}%`;
@@ -3372,6 +3368,25 @@
       const progress = document.getElementById('game-progress');
       if (progress) progress.style.width = '100%';
       showPanel('result-panel');
+
+      // 每日挑戰先寫本機完成狀態，避免畫面再次鎖定；雲端在背景確認。
+      const activeProfile = localStorage.getItem('9x9_active_profile') || '本機練習生';
+      if (result.mode === 'daily') {
+        localStorage.setItem(`9x9_daily_done_${activeProfile}_${getTodayKey()}`, 'true');
+        window.appState.hasCompletedDailyToday = true;
+      }
+      checkDailyChallengeCompletion();
+      window.appState.isSavingScore = false;
+
+      // 背景保存及同步；失敗時資料仍保留在 localStorage，稍後會自動補同步。
+      Promise.allSettled([
+        persistProfileLogs(),
+        saveScoreRecord(result)
+      ]).then(() => {
+        recalculateWeaknessFromLogs();
+        invalidateDataCache('leaderboard');
+        invalidateDataCache(`growth:${activeProfile}`);
+      }).catch(error => console.warn('背景保存流程發生錯誤：', error));
     }
     window.finishGame = finishGame;
 
@@ -3440,28 +3455,33 @@
       container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" class="w-full h-auto" role="img" aria-label="${escapeHtml(options.ariaLabel || '成長折線圖')}"><polygon points="${area}" fill="#dbeafe" opacity="0.55"></polygon>${grid}<polyline points="${line}" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>${dots}${labels}</svg>`;
     }
 
-    async function loadHistory() {
-      const activeProfile = localStorage.getItem('9x9_active_profile');
+    const DATA_CACHE_PREFIX = '9x9_data_cache_v58_';
+    function readDataCache(key, maxAgeMs = Infinity) {
+      try {
+        const raw = localStorage.getItem(DATA_CACHE_PREFIX + key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.data)) return null;
+        if (Date.now() - Number(parsed.savedAt || 0) > maxAgeMs) return null;
+        return parsed;
+      } catch (_) { return null; }
+    }
+    function writeDataCache(key, data) {
+      try { localStorage.setItem(DATA_CACHE_PREFIX + key, JSON.stringify({ savedAt: Date.now(), data })); } catch (_) {}
+    }
+    function invalidateDataCache(prefix) {
+      try {
+        Object.keys(localStorage).filter(k => k.startsWith(DATA_CACHE_PREFIX + prefix)).forEach(k => localStorage.removeItem(k));
+      } catch (_) {}
+    }
+    window.invalidateDataCache = invalidateDataCache;
+
+    function renderGrowthRecords(list) {
       const chartBox = document.getElementById('growth-charts');
       const empty = document.getElementById('growth-empty');
       const sampleLabel = document.getElementById('growth-sample-label');
-      if (!activeProfile || !chartBox || !empty || !sampleLabel) return;
-      sampleLabel.textContent = '讀取最近紀錄…';
-      let list = [];
-      const gasUrl = getGasUrl();
-      if (isConfiguredGasUrl(gasUrl) && window.cloudSyncAvailable !== false) {
-        try {
-          const result = await jsonpRequest(gasUrl, { action: 'getGrowthTrend', token: GAS_SYNC_TOKEN, nickname: activeProfile, limit: 12 }, 10000);
-          if (result && result.status === 'success') list = result.records || [];
-        } catch (e) { console.warn('雲端成長軌跡讀取失敗，改用本機紀錄。', e); }
-      }
-      if (!list.length) {
-        try { list = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (e) { list = []; }
-        list = list.filter(item => item.nickname === activeProfile)
-          .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).slice(-12)
-          .map(item => ({ timestamp:item.timestamp, accuracy:Number(item.accuracy)||0, avgSeconds:item.questionsCount ? (Number(item.duration)||0)/Number(item.questionsCount) : 0, mode:item.mode||'', questionsCount:Number(item.questionsCount)||0 }));
-      }
-      list = list.filter(item => item.timestamp && Number.isFinite(Number(item.avgSeconds)) && Number.isFinite(Number(item.accuracy)))
+      if (!chartBox || !empty || !sampleLabel) return;
+      list = (list || []).filter(item => item.timestamp && Number.isFinite(Number(item.avgSeconds)) && Number.isFinite(Number(item.accuracy)))
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       if (!list.length) { chartBox.classList.add('hidden'); empty.classList.remove('hidden'); sampleLabel.textContent='尚無紀錄'; return; }
       chartBox.classList.remove('hidden'); empty.classList.add('hidden'); sampleLabel.textContent=`最近 ${list.length} 次練習`;
@@ -3472,44 +3492,54 @@
       document.getElementById('growth-latest-speed').textContent=`${latest.speed.toFixed(2)} 秒/題`;
       document.getElementById('growth-latest-accuracy').textContent=`${latest.accuracy.toFixed(1)}%`;
     }
+
+    async function loadHistory() {
+      const activeProfile = localStorage.getItem('9x9_active_profile');
+      const sampleLabel = document.getElementById('growth-sample-label');
+      if (!activeProfile || !sampleLabel) return;
+      const cacheKey = `growth:${activeProfile}`;
+      const cached = readDataCache(cacheKey);
+      if (cached && cached.data.length) {
+        renderGrowthRecords(cached.data);
+        sampleLabel.textContent += '（快取）';
+      } else {
+        sampleLabel.textContent = '讀取最近紀錄…';
+      }
+
+      // stale-while-revalidate：快取立即顯示，雲端在背景更新。
+      let cloudList = [];
+      const gasUrl = getGasUrl();
+      if (isConfiguredGasUrl(gasUrl) && window.cloudSyncAvailable !== false) {
+        try {
+          const result = await jsonpRequest(gasUrl, { action: 'getGrowthTrend', token: GAS_SYNC_TOKEN, nickname: activeProfile, limit: 12 }, 10000);
+          if (result && result.status === 'success') cloudList = result.records || [];
+        } catch (e) { console.warn('雲端成長軌跡讀取失敗，保留快取或本機紀錄。', e); }
+      }
+      if (cloudList.length) {
+        writeDataCache(cacheKey, cloudList);
+        renderGrowthRecords(cloudList);
+        return;
+      }
+      if (cached && cached.data.length) return;
+
+      let localList = [];
+      try { localList = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (_) {}
+      localList = localList.filter(item => item.nickname === activeProfile)
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).slice(-12)
+        .map(item => ({ timestamp:item.timestamp, accuracy:Number(item.accuracy)||0, avgSeconds:item.questionsCount ? (Number(item.duration)||0)/Number(item.questionsCount) : 0, mode:item.mode||'', questionsCount:Number(item.questionsCount)||0 }));
+      renderGrowthRecords(localList);
+    }
     window.loadHistory = loadHistory;
 
-    async function loadLeaderboard(sortType = 'weighted') {
-      currentLeaderboardSort = sortType;
+    function renderLeaderboardRows(list) {
       const tbody = document.getElementById('leaderboard-tbody');
       if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 font-sans">讀取共同英雄榜中...</td></tr>';
-
-      let list = [];
-      const gasUrl = getGasUrl();
-      if (isConfiguredGasUrl(gasUrl)) {
-        try {
-          const result = await jsonpRequest(gasUrl, { action: 'listScores', token: GAS_SYNC_TOKEN, limit: 1000 }, 10000);
-          if (result && result.status === 'success') list = result.scores || [];
-        } catch (e) {
-          console.warn('讀取共同英雄榜失敗，改用本機備援。', e);
-        }
-      }
-
-      if (list.length === 0) {
-        try { list = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (e) { list = []; }
-      }
-
-      const filter = window.appState.leaderboardFilter;
-      list = list.filter(item => {
-        const count = Number(item.questionsCount || 0);
-        if (filter === 'all') return true;
-        if (filter === 'full') return count === 64 || count === 72;
-        return count === filter;
-      });
-      list.sort((a, b) => (Number(a.weightedScore) || 99999) - (Number(b.weightedScore) || 99999));
-
-      if (list.length === 0) {
+      if (!list || list.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 font-sans">目前尚無排行榜紀錄。</td></tr>';
         return;
       }
       tbody.innerHTML = '';
-      list.slice(0, 50).forEach((item, idx) => {
+      list.slice(0, 10).forEach((item, idx) => {
         const count = Number(item.questionsCount || 0);
         const duration = Number(item.duration || 0);
         const row = document.createElement('tr');
@@ -3524,6 +3554,45 @@
           <td class="py-2 px-3 text-right font-bold text-indigo-600 font-mono">${item.weightedScore ?? '-'}</td>`;
         tbody.appendChild(row);
       });
+    }
+
+    async function loadLeaderboard(sortType = 'weighted') {
+      currentLeaderboardSort = sortType;
+      const tbody = document.getElementById('leaderboard-tbody');
+      if (!tbody) return;
+      const filter = window.appState.leaderboardFilter;
+      const cacheKey = `leaderboard:${filter}`;
+      const cached = readDataCache(cacheKey);
+      if (cached && cached.data.length) renderLeaderboardRows(cached.data);
+      else tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 font-sans">讀取共同英雄榜中...</td></tr>';
+
+      // GAS 直接回傳該分類前 10 名；快取先顯示，雲端結果到達後再替換。
+      const gasUrl = getGasUrl();
+      if (isConfiguredGasUrl(gasUrl)) {
+        try {
+          const result = await jsonpRequest(gasUrl, {
+            action: 'getLeaderboard', token: GAS_SYNC_TOKEN,
+            questionFilter: String(filter), limit: 10
+          }, 10000);
+          if (result && result.status === 'success') {
+            const list = result.scores || [];
+            writeDataCache(cacheKey, list);
+            renderLeaderboardRows(list);
+            return;
+          }
+        } catch (e) { console.warn('讀取共同英雄榜失敗，保留快取或本機備援。', e); }
+      }
+      if (cached && cached.data.length) return;
+
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem('9x9_offline_history') || '[]'); } catch (_) {}
+      list = list.filter(item => {
+        const count = Number(item.questionsCount || 0);
+        if (filter === 'all') return true;
+        if (filter === 'full') return count === 64 || count === 72;
+        return count === Number(filter);
+      }).sort((a, b) => (Number(a.weightedScore) || 99999) - (Number(b.weightedScore) || 99999)).slice(0, 10);
+      renderLeaderboardRows(list);
     }
     window.loadLeaderboard = loadLeaderboard;
 

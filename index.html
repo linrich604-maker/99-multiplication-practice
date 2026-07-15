@@ -851,8 +851,8 @@
     // ==========================================
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyKuv3FLS9z6Bznib8kNwIOHZ8sgxRXkrR1gZM-vvHXAMTVeT0lsPEZM7HSGUkp36Uf/exec";
     const GAS_SYNC_TOKEN = "linrich-99x9-2026";
-    const APP_VERSION = "github-gas-5.9-weakness-profile";
-    const EXPECTED_GAS_VERSION = "5.9-weakness-profile";
+    const APP_VERSION = "github-gas-6.1-unique-nickname";
+    const EXPECTED_GAS_VERSION = "6.1-unique-nickname";
     const ADMIN_ATTEMPT_STORAGE_KEY = "9x9_admin_failed_attempts_v5";
     const ADMIN_LOCK_STORAGE_KEY = "9x9_admin_lock_until_v5";
     const ADMIN_MAX_FAILED_ATTEMPTS = 5;
@@ -2305,7 +2305,15 @@
     }
     window.validateProfileLoginInput = validateProfileLoginInput;
 
+    let profileLoginSubmitting = false;
+
     async function submitNewProfileCreation() {
+      if (profileLoginSubmitting) return;
+      profileLoginSubmitting = true;
+      const saveBtn = document.getElementById('btn-save-profile');
+      const originalBtnHtml = saveBtn ? saveBtn.innerHTML : '';
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.classList.add('opacity-60', 'cursor-not-allowed'); saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 驗證中…'; }
+      try {
       playSound('click');
       const name = document.getElementById('nickname-input').value.trim();
       let code = normalizePairingCode(document.getElementById('nickname-code-input').value);
@@ -2369,6 +2377,10 @@
       upsertLocalProfileMeta(name, code, { ip: window.appState.userIP || 'Localhost', userId: window.appState.userId || 'offline_user', localOnly: true, lastLoginAt: new Date().toISOString() });
       alertModal(isNew ? "本機備援已啟用" : "本機備援登入成功", isNew ? `目前無法連到試算表，已先在此裝置建立練習生【${name}】。認證碼為【 ${code} 】。` : `目前無法連到試算表，已驗證此裝置上的練習生【${name}】。`);
       selectProfile(name);
+      } finally {
+        profileLoginSubmitting = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.classList.remove('opacity-60', 'cursor-not-allowed'); saveBtn.innerHTML = originalBtnHtml || '開始練習之旅 <i class="fa-solid fa-arrow-right"></i>'; }
+      }
     }
     window.submitNewProfileCreation = submitNewProfileCreation;
 
